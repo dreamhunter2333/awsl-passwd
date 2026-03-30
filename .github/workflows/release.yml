@@ -25,7 +25,7 @@ jobs:
         id: resolve
         shell: bash
         run: |
-          app_id="${{ vars.APP_ID }}"
+          app_id="${{ secrets.APP_ID }}"
           if [[ -z "$app_id" ]]; then
             echo "APP_ID is not set" >&2
             exit 1
