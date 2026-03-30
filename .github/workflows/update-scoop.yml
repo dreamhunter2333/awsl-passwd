@@ -3,6 +3,10 @@ name: Update Scoop Bucket
 on:
   workflow_call:
     inputs:
+      app_id:
+        description: GitHub App ID
+        required: true
+        type: string
       tag_name:
         description: Release tag name
         required: true
@@ -19,7 +23,7 @@ jobs:
         id: app-token
         uses: actions/create-github-app-token@v2
         with:
-          app-id: ${{ vars.APP_ID }}
+          app-id: ${{ inputs.app_id }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
           owner: dreamhunter2333
           repositories: |
@@ -43,7 +47,7 @@ jobs:
           gh release download "$TAG_NAME" \
             --repo "${{ github.repository }}" \
             --dir dist \
-            --pattern "wails-passwd_*_windows_amd64.zip"
+            --pattern "wails-passwd.exe"
 
       - name: Generate scoop manifest
         shell: bash
@@ -51,7 +55,7 @@ jobs:
           TAG_NAME: ${{ inputs.tag_name }}
         run: |
           version="${TAG_NAME#v}"
-          asset="dist/wails-passwd_${version}_windows_amd64.zip"
+          asset="dist/wails-passwd.exe"
           sha256="$(sha256sum "$asset" | awk '{print $1}')"
           mkdir -p bucket-repo/bucket
 
@@ -63,7 +67,7 @@ jobs:
             "license": "MIT",
             "architecture": {
               "64bit": {
-                "url": "https://github.com/dreamhunter2333/awsl-passwd/releases/download/${TAG_NAME}/wails-passwd_${version}_windows_amd64.zip",
+                "url": "https://github.com/dreamhunter2333/awsl-passwd/releases/download/${TAG_NAME}/wails-passwd.exe",
                 "hash": "${sha256}"
               }
             },

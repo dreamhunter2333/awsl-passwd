@@ -12,34 +12,17 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    name: Build ${{ matrix.asset_suffix }}
-    runs-on: ${{ matrix.runner }}
+  build-macos:
+    name: Build macOS ${{ matrix.arch }}
+    runs-on: macos-14
     strategy:
       fail-fast: false
       matrix:
         include:
-          - runner: macos-14
-            asset_suffix: darwin_amd64
-            archive_ext: tar.gz
-            binary_name: wails-passwd
-            cgo_ldflags: -framework UniformTypeIdentifiers
-            goos: darwin
-            goarch: amd64
-          - runner: macos-14
-            asset_suffix: darwin_arm64
-            archive_ext: tar.gz
-            binary_name: wails-passwd
-            cgo_ldflags: -framework UniformTypeIdentifiers
-            goos: darwin
-            goarch: arm64
-          - runner: windows-latest
-            asset_suffix: windows_amd64
-            archive_ext: zip
-            binary_name: wails-passwd.exe
-            cgo_ldflags: ""
-            goos: windows
-            goarch: amd64
+          - arch: amd64
+            asset_name: wails-passwd-macOS-amd64.dmg
+          - arch: arm64
+            asset_name: wails-passwd-macOS-arm64.dmg
 
     steps:
       - name: Checkout source
@@ -51,103 +34,101 @@ jobs:
           go-version-file: go.mod
 
       - name: Add Go bin to PATH
-        if: runner.os != 'Windows'
         shell: bash
         run: echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
-      - name: Add Go bin to PATH
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $gobin = Join-Path (go env GOPATH) "bin"
-          Add-Content -Path $env:GITHUB_PATH -Value $gobin
-
       - name: Install Wails CLI
-        if: runner.os != 'Windows'
         shell: bash
         run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
 
-      - name: Install Wails CLI
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
-
-      - name: Generate Wails bindings
-        if: runner.os != 'Windows'
-        shell: bash
-        run: wails generate module
-
-      - name: Generate Wails bindings
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: wails generate module
-
-      - name: Build app
-        if: runner.os != 'Windows'
+      - name: Build Wails app
         shell: bash
         env:
-          CGO_LDFLAGS: ${{ matrix.cgo_ldflags }}
-          CGO_ENABLED: "1"
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
+          CGO_LDFLAGS: -framework UniformTypeIdentifiers
         run: |
-          mkdir -p build/bin
-          output="build/bin/${{ matrix.binary_name }}"
-          go build \
-            -buildvcs=false \
-            -tags "desktop,wv2runtime.download,production" \
-            -ldflags "-w -s" \
-            -o "$output"
+          wails build \
+            -clean \
+            -platform "darwin/${{ matrix.arch }}"
+            -s
 
-      - name: Build app
-        if: runner.os == 'Windows'
-        shell: pwsh
-        env:
-          CGO_ENABLED: "1"
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-        run: |
-          New-Item -ItemType Directory -Path build/bin -Force | Out-Null
-          go build `
-            -buildvcs=false `
-            -tags "desktop,wv2runtime.download,production" `
-            -ldflags "-w -s" `
-            -o "build/bin/${{ matrix.binary_name }}"
-
-      - name: Package asset
-        if: runner.os != 'Windows'
+      - name: Package DMG
         shell: bash
         env:
-          TAG_NAME: ${{ inputs.tag_name }}
-          ASSET_SUFFIX: ${{ matrix.asset_suffix }}
-          BINARY_NAME: ${{ matrix.binary_name }}
+          ASSET_NAME: ${{ matrix.asset_name }}
         run: |
-          version="${TAG_NAME#v}"
-          mkdir -p dist
-          tar -C build/bin -czf "dist/wails-passwd_${version}_${ASSET_SUFFIX}.tar.gz" "$BINARY_NAME"
+          app_path="build/bin/WailsPassword.app"
+          if [[ ! -d "$app_path" ]]; then
+            echo "App bundle not found: $app_path" >&2
+            find build -maxdepth 3 -print
+            exit 1
+          fi
 
-      - name: Package asset
-        if: runner.os == 'Windows'
-        shell: pwsh
-        env:
-          TAG_NAME: ${{ inputs.tag_name }}
-          ASSET_SUFFIX: ${{ matrix.asset_suffix }}
-          BINARY_NAME: ${{ matrix.binary_name }}
-        run: |
-          $version = $env:TAG_NAME.Substring(1)
-          New-Item -ItemType Directory -Path dist -Force | Out-Null
-          Compress-Archive -Path "build/bin/$env:BINARY_NAME" -DestinationPath "dist/wails-passwd_${version}_$env:ASSET_SUFFIX.zip" -Force
+          rm -rf dist
+          mkdir -p dist/dmg-root
+          cp -R "$app_path" dist/dmg-root/
+          ln -s /Applications dist/dmg-root/Applications
+
+          hdiutil create \
+            -volname "WailsPassword" \
+            -srcfolder dist/dmg-root \
+            -ov \
+            -format UDZO \
+            "dist/${ASSET_NAME}"
+
+          shasum -a 256 "dist/${ASSET_NAME}" | awk '{print $1}' > "dist/${ASSET_NAME}.sha256"
 
       - name: Upload release assets
-        if: runner.os != 'Windows'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           TAG_NAME: ${{ inputs.tag_name }}
         run: gh release upload "$TAG_NAME" dist/* --repo "${{ github.repository }}" --clobber
 
+  build-windows:
+    name: Build Windows amd64
+    runs-on: windows-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Add Go bin to PATH
+        shell: pwsh
+        run: |
+          $gobin = Join-Path (go env GOPATH) "bin"
+          Add-Content -Path $env:GITHUB_PATH -Value $gobin
+
+      - name: Install Wails CLI
+        shell: pwsh
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+
+      - name: Build Windows executable
+        shell: pwsh
+        run: |
+          wails build `
+            -clean `
+            -platform windows/amd64 `
+            -s
+
+      - name: Prepare release assets
+        shell: pwsh
+        run: |
+          if (!(Test-Path "build/bin/wails-passwd.exe")) {
+            Write-Host "Binary not found: build/bin/wails-passwd.exe"
+            Get-ChildItem build/bin -Recurse -ErrorAction SilentlyContinue
+            exit 1
+          }
+
+          New-Item -ItemType Directory -Path dist -Force | Out-Null
+          Copy-Item "build/bin/wails-passwd.exe" "dist/wails-passwd.exe"
+          $hash = (Get-FileHash -Algorithm SHA256 "dist/wails-passwd.exe").Hash.ToLower()
+          Set-Content -Path "dist/wails-passwd.exe.sha256" -Value $hash -NoNewline
+
       - name: Upload release assets
-        if: runner.os == 'Windows'
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}

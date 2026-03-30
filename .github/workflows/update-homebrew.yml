@@ -3,6 +3,10 @@ name: Update Homebrew Tap
 on:
   workflow_call:
     inputs:
+      app_id:
+        description: GitHub App ID
+        required: true
+        type: string
       tag_name:
         description: Release tag name
         required: true
@@ -19,7 +23,7 @@ jobs:
         id: app-token
         uses: actions/create-github-app-token@v2
         with:
-          app-id: ${{ vars.APP_ID }}
+          app-id: ${{ inputs.app_id }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
           owner: dreamhunter2333
           repositories: |
@@ -33,57 +37,51 @@ jobs:
           token: ${{ steps.app-token.outputs.token }}
           path: tap
 
-      - name: Download macOS assets
+      - name: Download macOS checksums
         shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}
           TAG_NAME: ${{ inputs.tag_name }}
         run: |
-          mkdir -p dist
-          gh release download "$TAG_NAME" \
-            --repo "${{ github.repository }}" \
-            --dir dist \
-            --pattern "wails-passwd_*_darwin_amd64.tar.gz" \
-            --pattern "wails-passwd_*_darwin_arm64.tar.gz"
+          base_url="https://github.com/${{ github.repository }}/releases/download/${TAG_NAME}"
+          curl -fsSL "${base_url}/wails-passwd-macOS-amd64.dmg.sha256" -o amd64.sha256
+          curl -fsSL "${base_url}/wails-passwd-macOS-arm64.dmg.sha256" -o arm64.sha256
 
-      - name: Generate formula
+      - name: Generate cask
         shell: bash
         env:
           TAG_NAME: ${{ inputs.tag_name }}
         run: |
           version="${TAG_NAME#v}"
-          amd64_asset="dist/wails-passwd_${version}_darwin_amd64.tar.gz"
-          arm64_asset="dist/wails-passwd_${version}_darwin_arm64.tar.gz"
-          amd64_sha="$(sha256sum "$amd64_asset" | awk '{print $1}')"
-          arm64_sha="$(sha256sum "$arm64_asset" | awk '{print $1}')"
+          amd64_sha="$(tr -d '\n\r' < amd64.sha256)"
+          arm64_sha="$(tr -d '\n\r' < arm64.sha256)"
+          mkdir -p tap/Casks
+          rm -f tap/Formula/wails-passwd.rb
 
-          cat > tap/Formula/wails-passwd.rb <<EOF
-          class WailsPasswd < Formula
+          cat > tap/Casks/wails-passwd.rb <<EOF
+          cask "wails-passwd" do
+            version "${version}"
+            name "Wails Password"
             desc "Desktop password manager with TOTP support"
             homepage "https://github.com/dreamhunter2333/awsl-passwd"
-            version "${version}"
-            license "MIT"
 
             if Hardware::CPU.intel?
-              url "https://github.com/dreamhunter2333/awsl-passwd/releases/download/${TAG_NAME}/wails-passwd_${version}_darwin_amd64.tar.gz"
+              url "https://github.com/dreamhunter2333/awsl-passwd/releases/download/${TAG_NAME}/wails-passwd-macOS-amd64.dmg"
               sha256 "${amd64_sha}"
             else
-              url "https://github.com/dreamhunter2333/awsl-passwd/releases/download/${TAG_NAME}/wails-passwd_${version}_darwin_arm64.tar.gz"
+              url "https://github.com/dreamhunter2333/awsl-passwd/releases/download/${TAG_NAME}/wails-passwd-macOS-arm64.dmg"
               sha256 "${arm64_sha}"
             end
 
-            def install
-              bin.install "wails-passwd"
-            end
+            app "WailsPassword.app"
           end
           EOF
 
-      - name: Commit and push formula
+      - name: Commit and push cask
         shell: bash
         working-directory: tap
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add Formula/wails-passwd.rb
+          git add -A
           git commit -m "chore: update wails-passwd to ${{ inputs.tag_name }}" || exit 0
           git push

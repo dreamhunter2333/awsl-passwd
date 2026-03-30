@@ -63,6 +63,7 @@ jobs:
       - build-assets
     uses: ./.github/workflows/update-homebrew.yml
     with:
+      app_id: ${{ vars.APP_ID }}
       tag_name: ${{ needs.create-release.outputs.tag_name }}
     secrets: inherit
 
@@ -72,5 +73,6 @@ jobs:
       - build-assets
     uses: ./.github/workflows/update-scoop.yml
     with:
+      app_id: ${{ vars.APP_ID }}
       tag_name: ${{ needs.create-release.outputs.tag_name }}
     secrets: inherit
