@@ -45,11 +45,7 @@ jobs:
         shell: bash
         env:
           CGO_LDFLAGS: -framework UniformTypeIdentifiers
-        run: |
-          wails build \
-            -clean \
-            -platform "darwin/${{ matrix.arch }}"
-            -s
+        run: wails build -clean -platform "darwin/${{ matrix.arch }}" -s
 
       - name: Package DMG
         shell: bash
@@ -108,11 +104,7 @@ jobs:
 
       - name: Build Windows executable
         shell: pwsh
-        run: |
-          wails build `
-            -clean `
-            -platform windows/amd64 `
-            -s
+        run: wails build -clean -platform windows/amd64 -s
 
       - name: Prepare release assets
         shell: pwsh
