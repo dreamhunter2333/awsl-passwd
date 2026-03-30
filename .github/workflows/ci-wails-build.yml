@@ -1,0 +1,145 @@
+name: CI Wails Build
+
+on:
+  workflow_call:
+    inputs:
+      tag_name:
+        description: Release tag name
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.asset_suffix }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-13
+            platform: darwin/amd64
+            asset_suffix: darwin_amd64
+            archive_ext: tar.gz
+            binary_name: wails-passwd
+            cgo_ldflags: -framework UniformTypeIdentifiers
+          - runner: macos-14
+            platform: darwin/arm64
+            asset_suffix: darwin_arm64
+            archive_ext: tar.gz
+            binary_name: wails-passwd
+            cgo_ldflags: -framework UniformTypeIdentifiers
+          - runner: windows-latest
+            platform: windows/amd64
+            asset_suffix: windows_amd64
+            archive_ext: zip
+            binary_name: wails-passwd.exe
+            cgo_ldflags: ""
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Add Go bin to PATH
+        if: runner.os != 'Windows'
+        shell: bash
+        run: echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Add Go bin to PATH
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $gobin = Join-Path (go env GOPATH) "bin"
+          Add-Content -Path $env:GITHUB_PATH -Value $gobin
+
+      - name: Install Wails CLI
+        if: runner.os != 'Windows'
+        shell: bash
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+
+      - name: Install Wails CLI
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+
+      - name: Generate Wails bindings
+        if: runner.os != 'Windows'
+        shell: bash
+        run: wails generate module
+
+      - name: Generate Wails bindings
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: wails generate module
+
+      - name: Build app
+        if: runner.os != 'Windows'
+        shell: bash
+        env:
+          CGO_LDFLAGS: ${{ matrix.cgo_ldflags }}
+        run: |
+          mkdir -p build/bin
+          output="build/bin/${{ matrix.binary_name }}"
+          go build \
+            -buildvcs=false \
+            -tags "desktop,wv2runtime.download,production" \
+            -ldflags "-w -s" \
+            -o "$output"
+
+      - name: Build app
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path build/bin -Force | Out-Null
+          go build `
+            -buildvcs=false `
+            -tags "desktop,wv2runtime.download,production" `
+            -ldflags "-w -s" `
+            -o "build/bin/${{ matrix.binary_name }}"
+
+      - name: Package asset
+        if: runner.os != 'Windows'
+        shell: bash
+        env:
+          TAG_NAME: ${{ inputs.tag_name }}
+          ASSET_SUFFIX: ${{ matrix.asset_suffix }}
+          BINARY_NAME: ${{ matrix.binary_name }}
+        run: |
+          version="${TAG_NAME#v}"
+          mkdir -p dist
+          tar -C build/bin -czf "dist/wails-passwd_${version}_${ASSET_SUFFIX}.tar.gz" "$BINARY_NAME"
+
+      - name: Package asset
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          TAG_NAME: ${{ inputs.tag_name }}
+          ASSET_SUFFIX: ${{ matrix.asset_suffix }}
+          BINARY_NAME: ${{ matrix.binary_name }}
+        run: |
+          $version = $env:TAG_NAME.Substring(1)
+          New-Item -ItemType Directory -Path dist -Force | Out-Null
+          Compress-Archive -Path "build/bin/$env:BINARY_NAME" -DestinationPath "dist/wails-passwd_${version}_$env:ASSET_SUFFIX.zip" -Force
+
+      - name: Upload release assets
+        if: runner.os != 'Windows'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ inputs.tag_name }}
+        run: gh release upload "$TAG_NAME" dist/* --repo "${{ github.repository }}" --clobber
+
+      - name: Upload release assets
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ inputs.tag_name }}
+        run: gh release upload $env:TAG_NAME dist/* --repo "${{ github.repository }}" --clobber

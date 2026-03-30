@@ -1,804 +1,221 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 
 <head>
     <meta charset="UTF-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>密码管理器</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            --default-contextmenu: show;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f5f5f5;
-            color: #333;
-        }
-
-        .app {
-            max-width: 1200px;
-            min-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            min-height: 100vh;
-        }
-
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-            padding: 20px;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .header h1 {
-            font-size: 24px;
-            font-weight: 600;
-            color: #2c3e50;
-        }
-
-        .header-actions {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-        }
-
-        @keyframes spin {
-            from {
-                transform: rotate(0deg);
-            }
-
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
-        .btn {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-            outline: none;
-        }
-
-        .btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-        }
-
-        .btn-primary {
-            background: #3498db;
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: #2980b9;
-        }
-
-        .btn-secondary {
-            background: #95a5a6;
-            color: white;
-        }
-
-        .btn-secondary:hover {
-            background: #7f8c8d;
-        }
-
-        .btn-danger {
-            background: #e74c3c;
-            color: white;
-        }
-
-        .btn-danger:hover {
-            background: #c0392b;
-        }
-
-        .btn-small {
-            padding: 4px 8px;
-            font-size: 12px;
-            margin-left: 4px;
-        }
-
-        .main {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            min-height: 400px;
-            padding: 0;
-        }
-
-        .accounts-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 0;
-            table-layout: fixed;
-            min-width: 800px;
-        }
-
-        .accounts-table thead th {
-            background: #f8f9fa;
-            padding: 16px;
-            text-align: left;
-            font-weight: 600;
-            color: #2c3e50;
-            border-bottom: 2px solid #dee2e6;
-            font-size: 14px;
-        }
-
-        .accounts-table thead th:nth-child(1) {
-            width: 30%;
-        }
-
-        /* 账号名 */
-        .accounts-table thead th:nth-child(2) {
-            width: 25%;
-        }
-
-        /* 密码 */
-        .accounts-table thead th:nth-child(3) {
-            width: 15%;
-        }
-
-        /* 备注 */
-        .accounts-table thead th:nth-child(4) {
-            width: 15%;
-        }
-
-        /* 二步验证 */
-        .accounts-table thead th:nth-child(5) {
-            width: 15%;
-        }
-
-        /* 操作 */
-
-        .accounts-table tbody td {
-            padding: 16px;
-            border-bottom: 1px solid #eee;
-            vertical-align: top;
-            text-align: left;
-        }
-
-        .accounts-table tbody tr:hover {
-            background: #f8f9fa;
-        }
-
-        .accounts-table tbody tr:last-child td {
-            border-bottom: none;
-        }
-
-        .account-field-value {
-            font-size: 14px;
-            color: #333;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            min-width: 0;
-        }
-
-        .account-field-text {
-            flex: 1;
-            word-break: break-all;
-            min-width: 0;
-        }
-
-        .account-field-password {
-            font-family: monospace;
-            font-size: 12px;
-            background: #f8f9fa;
-            padding: 4px 8px;
-            border-radius: 4px;
-            border: 1px solid #dee2e6;
-            flex: 1;
-            min-width: 0;
-            word-break: break-all;
-            word-wrap: break-word;
-            white-space: pre-wrap;
-        }
-
-        .otp-code {
-            font-family: monospace;
-            font-size: 16px;
-            font-weight: bold;
-            color: #3498db;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 4px;
-        }
-
-        .otp-content {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .otp-value {
-            font-size: 16px;
-            font-weight: bold;
-        }
-
-        .copy-btn {
-            background: none;
-            border: none;
-            padding: 4px;
-            border-radius: 4px;
-            cursor: pointer;
-            color: #666;
-            font-size: 12px;
-            transition: all 0.2s;
-            opacity: 0.7;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 24px;
-            height: 24px;
-        }
-
-        .copy-btn:hover {
-            background: rgba(0, 0, 0, 0.1);
-            color: #333;
-            opacity: 1;
-        }
-
-        .copy-btn:active {
-            transform: scale(0.95);
-        }
-
-        .copy-btn.copied {
-            color: #27ae60;
-            opacity: 1;
-        }
-
-        .copy-icon {
-            width: 14px;
-            height: 14px;
-        }
-
-        .otp-timer {
-            font-size: 10px;
-            color: #666;
-            margin: 0;
-        }
-
-        .account-actions {
-            display: flex;
-            gap: 8px;
-            justify-content: flex-start;
-            min-width: 120px;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-        }
-
-        .empty-state p {
-            font-size: 16px;
-            color: #666;
-            margin-bottom: 20px;
-        }
-
-        .modal {
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal-content {
-            background-color: white;
-            border-radius: 8px;
-            width: 90%;
-            max-width: 500px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-            animation: modalShow 0.3s ease-out;
-        }
-
-        @keyframes modalShow {
-            from {
-                opacity: 0;
-                transform: scale(0.7);
-            }
-
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px 20px 0 20px;
-            margin-bottom: 20px;
-        }
-
-        .modal-header h2 {
-            font-size: 18px;
-            font-weight: 600;
-            color: #2c3e50;
-        }
-
-        .close {
-            color: #aaa;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-            line-height: 1;
-        }
-
-        .close:hover {
-            color: #333;
-        }
-
-        .modal-body {
-            padding: 0 20px;
-        }
-
-        .form-group {
-            margin-bottom: 16px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 6px;
-            font-weight: 500;
-            color: #333;
-            font-size: 14px;
-        }
-
-        .form-group input,
-        .form-group textarea {
-            width: 100%;
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
-            transition: border-color 0.2s;
-        }
-
-        .form-group input:focus,
-        .form-group textarea:focus {
-            outline: none;
-            border-color: #3498db;
-            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
-        }
-
-        .form-group input[type="checkbox"] {
-            width: auto;
-            margin-right: 8px;
-        }
-
-        .modal-footer {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            padding: 20px 20px;
-            margin-top: 20px;
-            border-top: 1px solid #eee;
-        }
-    </style>
+    <link href="./styles.css" rel="stylesheet">
 </head>
 
 <body>
-    <div class="app" id="app">
-        <header class="header">
-            <h1>密码管理器</h1>
-            <div class="header-actions">
-                <button class="btn btn-primary" onclick="showAddModal()">添加账号</button>
-                <button class="btn btn-secondary" onclick="refreshAccounts()" title="刷新账号列表">
-                    刷新
-                </button>
+    <div class="shell">
+        <header class="topbar panel">
+            <div class="hero">
+                <div class="hero-mark" aria-hidden="true">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="currentColor">
+                        <path
+                            d="M17 8h-1V6a4 4 0 1 0-8 0v2H7a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2Zm-6 7.73V17a1 1 0 1 0 2 0v-1.27a2 2 0 1 0-2 0ZM9.9 8V6a2.1 2.1 0 1 1 4.2 0v2H9.9Z" />
+                    </svg>
+                </div>
+                <div class="hero-copy">
+                    <span class="hero-badge" data-i18n="heroBadge"></span>
+                    <h1 data-i18n="appTitle"></h1>
+                    <p data-i18n="appSubtitle"></p>
+                </div>
+            </div>
+            <div class="topbar-actions">
+                <div class="language-switcher">
+                    <button class="language-button" data-action="set-language" data-language="zh">中文</button>
+                    <button class="language-button" data-action="set-language" data-language="en">EN</button>
+                </div>
+                <div class="action-row">
+                    <button class="md-button tonal" data-action="refresh" id="refreshButton">
+                        <svg class="button-icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path
+                                d="M17.65 6.35A7.95 7.95 0 0 0 12 4V1L7 6l5 5V7a5 5 0 1 1-4.9 6.01H5.02A7 7 0 1 0 17.65 6.35Z" />
+                        </svg>
+                        <span data-i18n="refresh"></span>
+                    </button>
+                    <button class="md-button filled" data-action="show-add">
+                        <svg class="button-icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19 11H13V5h-2v6H5v2h6v6h2v-6h6z" />
+                        </svg>
+                        <span data-i18n="addAccount"></span>
+                    </button>
+                </div>
             </div>
         </header>
 
-        <main class="main">
-            <table class="accounts-table" id="accountsTable" style="display: none;">
-                <thead>
-                    <tr>
-                        <th>账号名</th>
-                        <th>密码</th>
-                        <th>备注</th>
-                        <th>二步验证</th>
-                        <th>操作</th>
-                    </tr>
-                </thead>
-                <tbody id="accountsList">
-                    <!-- 账号列表将在这里动态加载 -->
-                </tbody>
-            </table>
+        <div class="dashboard-grid">
+            <section class="stats-panel panel">
+                <article class="stat-card">
+                    <div class="stat-label" data-i18n="totalAccounts"></div>
+                    <div class="stat-value" id="accountCount">0</div>
+                    <div class="stat-caption" data-i18n="totalAccountsCaption"></div>
+                </article>
+                <article class="stat-card">
+                    <div class="stat-label" data-i18n="otpEnabled"></div>
+                    <div class="stat-value" id="otpCount">0</div>
+                    <div class="stat-caption" data-i18n="otpEnabledCaption"></div>
+                </article>
+                <article class="stat-card">
+                    <div class="stat-label" data-i18n="fileMode"></div>
+                    <div class="stat-value" id="storageModeValue">-</div>
+                    <div class="stat-caption" data-i18n="fileModeCaption"></div>
+                </article>
+            </section>
 
-            <div class="empty-state" id="emptyState" style="display: none;">
-                <p>暂无账号信息</p>
-                <button class="btn btn-primary" onclick="showAddModal()">添加第一个账号</button>
-            </div>
-        </main>
-
-        <!-- 添加/编辑账号模态框 -->
-        <div class="modal" id="accountModal" style="display: none;">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2 id="modalTitle">添加账号</h2>
-                    <span class="close" onclick="hideAccountModal()">&times;</span>
+            <section class="storage-panel panel">
+                <div class="section-heading">
+                    <div>
+                        <h2 data-i18n="storageTitle"></h2>
+                        <p data-i18n="storageSubtitle"></p>
+                    </div>
+                    <span class="mode-chip" id="storageModeChip">-</span>
                 </div>
-                <form class="modal-body" id="accountForm">
+                <div class="storage-stack">
+                    <div class="storage-item">
+                        <div class="storage-item-label" data-i18n="currentFilePath"></div>
+                        <div class="storage-path" id="storagePath">-</div>
+                    </div>
+                    <div class="storage-item">
+                        <div class="storage-item-label" data-i18n="defaultFilePath"></div>
+                        <div class="storage-path" id="defaultStoragePath">-</div>
+                    </div>
+                </div>
+                <div class="storage-actions">
+                    <button class="md-button filled" data-action="select-config">
+                        <svg class="button-icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M10 4H4v16h16V8h-8l-2-4Zm2 6h6v8H6V6h2.76l2 4H12Z" />
+                        </svg>
+                        <span data-i18n="changeFile"></span>
+                    </button>
+                    <button class="md-button outlined" data-action="reset-config" id="resetConfigButton">
+                        <svg class="button-icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path
+                                d="M12 5V1L7 6l5 5V7c2.76 0 5 2.24 5 5a5 5 0 1 1-9.9-1h-2.02A7 7 0 1 0 12 5Z" />
+                        </svg>
+                        <span data-i18n="resetDefault"></span>
+                    </button>
+                </div>
+            </section>
+
+            <section class="accounts-panel panel">
+                <div class="panel-header">
+                    <div>
+                        <h2 data-i18n="accountsTitle"></h2>
+                        <p class="section-heading-copy" data-i18n="accountsSubtitle"></p>
+                    </div>
+                    <div class="panel-tools">
+                        <span class="status-pill" id="recordsStatus">0</span>
+                    </div>
+                </div>
+
+                <div class="table-shell" id="accountsTableShell">
+                    <div class="table-scroll">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th data-i18n="colName"></th>
+                                    <th data-i18n="colPassword"></th>
+                                    <th data-i18n="colNotes"></th>
+                                    <th data-i18n="colOtp"></th>
+                                    <th data-i18n="colActions"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="accountsList"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="empty-state" id="emptyState">
+                    <div class="empty-card">
+                        <div class="empty-icon" aria-hidden="true">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="currentColor">
+                                <path
+                                    d="M18 8h-1V6a5 5 0 1 0-10 0v2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2Zm-9-2a3 3 0 1 1 6 0v2H9V6Zm3 9.75A1.75 1.75 0 1 1 13.75 14 1.75 1.75 0 0 1 12 15.75Z" />
+                            </svg>
+                        </div>
+                        <h3 data-i18n="emptyTitle"></h3>
+                        <p data-i18n="emptySubtitle"></p>
+                        <button class="md-button filled" data-action="show-add" data-i18n="addFirstAccount"></button>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="modal" id="accountModal">
+        <div class="dialog" role="dialog" aria-modal="true">
+            <div class="dialog-header">
+                <h2 class="dialog-title" id="accountModalTitle"></h2>
+                <button class="icon-action" data-action="close-modal" data-modal-id="accountModal" aria-label="close">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="currentColor">
+                        <path
+                            d="M18.3 5.71 12 12l6.3 6.29-1.41 1.41L10.59 13.4 4.29 19.7 2.88 18.29 9.17 12 2.88 5.71 4.29 4.3l6.3 6.29 6.29-6.3z" />
+                    </svg>
+                </button>
+            </div>
+            <div class="dialog-body">
+                <form id="accountForm">
                     <input type="hidden" id="accountId" value="">
-
-                    <div class="form-group">
-                        <label for="accountName">账号名*</label>
-                        <input type="text" id="accountName" required>
+                    <div class="form-grid">
+                        <div class="field">
+                            <label for="accountName" data-i18n="fieldName"></label>
+                            <input id="accountName" required type="text">
+                        </div>
+                        <div class="field">
+                            <label for="accountPassword" data-i18n="fieldPassword"></label>
+                            <input id="accountPassword" type="text">
+                        </div>
+                        <div class="field">
+                            <label for="accountOTPKey" data-i18n="fieldOtpKey"></label>
+                            <input id="accountOTPKey" data-i18n-placeholder="otpPlaceholder" type="text">
+                            <div class="field-helper" data-i18n="otpHelper"></div>
+                        </div>
+                        <div class="field">
+                            <label for="accountNotes" data-i18n="fieldNotes"></label>
+                            <textarea id="accountNotes"></textarea>
+                        </div>
                     </div>
-
-                    <div class="form-group">
-                        <label for="accountPassword">密码</label>
-                        <input type="text" id="accountPassword">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="accountOTPKey">OTP密钥 (可选)</label>
-                        <input type="text" id="accountOTPKey" placeholder="输入32位BASE32密钥">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="accountNotes">备注</label>
-                        <textarea id="accountNotes" rows="3"></textarea>
-                    </div>
-
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" onclick="hideAccountModal()">取消</button>
-                        <button type="submit" class="btn btn-primary">保存</button>
+                    <div class="dialog-actions">
+                        <button class="md-button outlined" data-action="close-modal" data-modal-id="accountModal"
+                            data-i18n="cancel" type="button"></button>
+                        <button class="md-button filled" data-i18n="save" type="submit"></button>
                     </div>
                 </form>
             </div>
         </div>
+    </div>
 
-        <!-- 删除确认模态框 -->
-        <div class="modal" id="deleteModal" style="display: none;">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2>确认删除</h2>
-                    <span class="close" onclick="hideDeleteModal()">&times;</span>
-                </div>
-                <div class="modal-body">
-                    <p>确定要删除这个账号吗？此操作无法撤销。</p>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" onclick="hideDeleteModal()">取消</button>
-                        <button type="button" class="btn btn-danger" id="confirmDeleteBtn">删除</button>
-                    </div>
+    <div class="modal" id="deleteModal">
+        <div class="dialog" role="dialog" aria-modal="true">
+            <div class="dialog-header">
+                <h2 class="dialog-title" data-i18n="deleteTitle"></h2>
+                <button class="icon-action" data-action="close-modal" data-modal-id="deleteModal" aria-label="close">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="currentColor">
+                        <path
+                            d="M18.3 5.71 12 12l6.3 6.29-1.41 1.41L10.59 13.4 4.29 19.7 2.88 18.29 9.17 12 2.88 5.71 4.29 4.3l6.3 6.29 6.29-6.3z" />
+                    </svg>
+                </button>
+            </div>
+            <div class="dialog-body">
+                <p class="dialog-copy" data-i18n="deleteBody"></p>
+                <div class="dialog-actions">
+                    <button class="md-button outlined" data-action="close-modal" data-modal-id="deleteModal"
+                        data-i18n="cancel" type="button"></button>
+                    <button class="md-button destructive" data-action="confirm-delete" data-i18n="deleteConfirm"
+                        type="button"></button>
                 </div>
             </div>
         </div>
     </div>
 
-    <script>
-        let accounts = [];
-        let currentEditId = '';
+    <div class="snackbar" id="snackbar"></div>
 
-        // 页面加载完成后初始化
-        document.addEventListener('DOMContentLoaded', function () {
-            loadAccounts();
-            startOTPRefresh();
-        });
-
-        // 加载账号列表
-        async function loadAccounts() {
-            try {
-                accounts = await window.go.main.App.GetAccounts() || [];
-                renderAccounts();
-            } catch (err) {
-                console.error('加载账号失败:', err);
-                showEmpty();
-            }
-        }
-
-        // 渲染账号列表
-        function renderAccounts() {
-            const accountsList = document.getElementById('accountsList');
-            const accountsTable = document.getElementById('accountsTable');
-            const emptyState = document.getElementById('emptyState');
-
-            if (accounts.length === 0) {
-                showEmpty();
-                return;
-            }
-
-            emptyState.style.display = 'none';
-            accountsTable.style.display = 'table';
-
-            accountsList.innerHTML = accounts.map(account => `
-            <tr data-id="${account.id}">
-                <td>
-                    <div class="account-field-value">
-                        <div class="account-field-text">${escapeHtml(account.name)}</div>
-                        <button class="copy-btn" onclick="copyToClipboard('${escapeHtml(account.name)}', this)" title="复制账号名">
-                            <svg class="copy-icon" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
-                            </svg>
-                        </button>
-                    </div>
-                </td>
-                <td>
-                    <div class="account-field-value">
-                        <div class="account-field-password">${escapeHtml(account.password || '未设置')}</div>
-                        ${account.password ? `
-                            <button class="copy-btn" onclick="copyToClipboard('${escapeHtml(account.password)}', this)" title="复制密码">
-                                <svg class="copy-icon" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
-                                </svg>
-                            </button>
-                        ` : ''}
-                    </div>
-                </td>
-                <td>
-                    <div class="account-field-value">
-                        <div class="account-field-text">${escapeHtml(account.notes || '无')}</div>
-                    </div>
-                </td>
-                <td>
-                    <div class="otp-code" id="otp-${account.id}">
-                        ${account.otp_code ? `
-                            <div class="otp-content">
-                                <span class="otp-value">${account.otp_code}</span>
-                                <button class="copy-btn" onclick="copyToClipboard('${account.otp_code}', this)" title="复制验证码">
-                                    <svg class="copy-icon" viewBox="0 0 24 24" fill="currentColor">
-                                        <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
-                                    </svg>
-                                </button>
-                            </div>
-                            <div class="otp-timer" id="timer-${account.id}" data-remaining="${account.otp_remaining || 0}">${account.otp_remaining || 0}s</div>
-                        ` : '未启用'}
-                    </div>
-                </td>
-                <td>
-                    <div class="account-actions">
-                        <button class="btn btn-secondary btn-small" onclick="editAccount('${account.id}')">编辑</button>
-                        <button class="btn btn-danger btn-small" onclick="deleteAccount('${account.id}')">删除</button>
-                    </div>
-                </td>
-            </tr>
-        `).join('');
-        }
-
-        // 显示空状态
-        function showEmpty() {
-            const accountsList = document.getElementById('accountsList');
-            const accountsTable = document.getElementById('accountsTable');
-            const emptyState = document.getElementById('emptyState');
-
-            accountsList.innerHTML = '';
-            accountsTable.style.display = 'none';
-            emptyState.style.display = 'block';
-        }
-
-        // HTML转义
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        // 显示添加账号模态框
-        window.showAddModal = function () {
-            currentEditId = '';
-            document.getElementById('modalTitle').textContent = '添加账号';
-            document.getElementById('accountForm').reset();
-            document.getElementById('accountId').value = '';
-            document.getElementById('accountModal').style.display = 'flex';
-        }
-
-        // 编辑账号
-        window.editAccount = function (id) {
-            const account = accounts.find(acc => acc.id === id);
-            if (!account) return;
-
-            currentEditId = id;
-            document.getElementById('modalTitle').textContent = '编辑账号';
-            document.getElementById('accountId').value = id;
-            document.getElementById('accountName').value = account.name;
-            document.getElementById('accountPassword').value = account.password || '';
-            document.getElementById('accountOTPKey').value = account.otp_key || '';
-            document.getElementById('accountNotes').value = account.notes || '';
-            document.getElementById('accountModal').style.display = 'flex';
-        }
-
-        // 隐藏账号模态框
-        window.hideAccountModal = function () {
-            document.getElementById('accountModal').style.display = 'none';
-        }
-
-        // 删除账号
-        window.deleteAccount = function (id) {
-            const account = accounts.find(acc => acc.id === id);
-            if (!account) return;
-
-            document.getElementById('deleteModal').style.display = 'flex';
-            document.getElementById('confirmDeleteBtn').onclick = function () {
-                performDelete(id);
-            };
-        }
-
-        // 执行删除
-        async function performDelete(id) {
-            try {
-                await window.go.main.App.DeleteAccount(id);
-                await loadAccounts();
-                hideDeleteModal();
-            } catch (err) {
-                alert('删除失败: ' + err);
-            }
-        }
-
-        // 隐藏删除模态框
-        window.hideDeleteModal = function () {
-            document.getElementById('deleteModal').style.display = 'none';
-        }
-
-        // 表单提交处理
-        document.getElementById('accountForm').addEventListener('submit', async function (e) {
-            e.preventDefault();
-
-            const name = document.getElementById('accountName').value.trim();
-            const password = document.getElementById('accountPassword').value;
-            const otpKey = document.getElementById('accountOTPKey').value.trim();
-            const notes = document.getElementById('accountNotes').value.trim();
-            const id = document.getElementById('accountId').value;
-
-            if (!name) {
-                alert('请输入账号名');
-                return;
-            }
-
-            try {
-                if (id) {
-                    // 更新账号
-                    await window.go.main.App.UpdateAccount(id, name, password, notes, otpKey);
-                } else {
-                    // 创建账号
-                    await window.go.main.App.CreateAccount(name, password, notes, otpKey);
-                }
-
-                await loadAccounts();
-                hideAccountModal();
-            } catch (err) {
-                alert('保存失败: ' + err);
-            }
-        });
-
-        // OTP刷新功能
-        function startOTPRefresh() {
-            updateOTPTimers();
-            setInterval(updateOTPTimers, 1000);
-
-            // 每30秒刷新一次OTP码
-            setInterval(async () => {
-                await loadAccounts();
-            }, 30000);
-        }
-
-        function updateOTPTimers() {
-            accounts.forEach(account => {
-                if (account.otp_code) {
-                    const timerElement = document.getElementById(`timer-${account.id}`);
-                    if (timerElement) {
-                        // 使用后端返回的剩余时间，并递减显示
-                        let remaining = parseInt(timerElement.dataset.remaining || account.otp_remaining || 0);
-                        if (remaining > 0) {
-                            remaining--;
-                            timerElement.dataset.remaining = remaining;
-                            timerElement.textContent = `${remaining}s`;
-                        } else {
-                            // 倒计时结束，重新加载账号数据
-                            loadAccounts();
-                        }
-                    }
-                }
-            });
-        }
-
-        // 复制到剪贴板函数
-        async function copyToClipboard(text, buttonElement) {
-            try {
-                await navigator.clipboard.writeText(text);
-
-                // 显示复制成功的视觉反馈
-                const originalIcon = buttonElement.innerHTML;
-                buttonElement.classList.add('copied');
-                buttonElement.innerHTML = `
-                <svg class="copy-icon" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/>
-                </svg>
-            `;
-
-                setTimeout(() => {
-                    buttonElement.classList.remove('copied');
-                    buttonElement.innerHTML = originalIcon;
-                }, 1500);
-            } catch (err) {
-                console.error('复制失败:', err);
-                // 降级方案：使用传统的复制方法
-                try {
-                    const textArea = document.createElement('textarea');
-                    textArea.value = text;
-                    document.body.appendChild(textArea);
-                    textArea.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(textArea);
-
-                    // 显示复制成功的视觉反馈
-                    const originalIcon = buttonElement.innerHTML;
-                    buttonElement.classList.add('copied');
-                    buttonElement.innerHTML = `
-                    <svg class="copy-icon" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/>
-                    </svg>
-                `;
-
-                    setTimeout(() => {
-                        buttonElement.classList.remove('copied');
-                        buttonElement.innerHTML = originalIcon;
-                    }, 1500);
-                } catch (fallbackErr) {
-                    alert('复制失败，请手动选择复制');
-                }
-            }
-        }
-
-        // 将 copyToClipboard 函数暴露到全局作用域
-        window.copyToClipboard = copyToClipboard;
-
-        // 手动刷新账号列表
-        window.refreshAccounts = async function () {
-            const refreshBtn = document.querySelector('button[onclick="refreshAccounts()"]');
-            const originalText = refreshBtn.textContent;
-
-            // 显示刷新状态
-            refreshBtn.disabled = true;
-            refreshBtn.textContent = '刷新中...';
-
-            try {
-                await loadAccounts();
-            } catch (err) {
-                console.error('刷新失败:', err);
-                alert('刷新失败，请重试');
-            } finally {
-                // 恢复按钮状态
-                setTimeout(() => {
-                    refreshBtn.disabled = false;
-                    refreshBtn.textContent = originalText;
-                }, 500);
-            }
-        };
-
-        // 点击模态框外部关闭
-        window.onclick = function (event) {
-            const accountModal = document.getElementById('accountModal');
-            const deleteModal = document.getElementById('deleteModal');
-
-            if (event.target === accountModal) {
-                hideAccountModal();
-            }
-            if (event.target === deleteModal) {
-                hideDeleteModal();
-            }
-        }
-    </script>
+    <script src="./i18n.js"></script>
+    <script src="./app.js"></script>
 </body>
 
 </html>

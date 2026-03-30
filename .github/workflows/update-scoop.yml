@@ -1,0 +1,88 @@
+name: Update Scoop Bucket
+
+on:
+  workflow_call:
+    inputs:
+      tag_name:
+        description: Release tag name
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  update-scoop:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: dreamhunter2333
+          repositories: |
+            scoop-dreamhunter
+          permission-contents: write
+
+      - name: Checkout Scoop bucket
+        uses: actions/checkout@v4
+        with:
+          repository: dreamhunter2333/scoop-dreamhunter
+          token: ${{ steps.app-token.outputs.token }}
+          path: bucket-repo
+
+      - name: Download Windows asset
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ inputs.tag_name }}
+        run: |
+          mkdir -p dist
+          gh release download "$TAG_NAME" \
+            --repo "${{ github.repository }}" \
+            --dir dist \
+            --pattern "wails-passwd_*_windows_amd64.zip"
+
+      - name: Generate scoop manifest
+        shell: bash
+        env:
+          TAG_NAME: ${{ inputs.tag_name }}
+        run: |
+          version="${TAG_NAME#v}"
+          asset="dist/wails-passwd_${version}_windows_amd64.zip"
+          sha256="$(sha256sum "$asset" | awk '{print $1}')"
+          mkdir -p bucket-repo/bucket
+
+          cat > bucket-repo/bucket/wails-passwd.json <<EOF
+          {
+            "version": "${version}",
+            "description": "Desktop password manager with TOTP support",
+            "homepage": "https://github.com/dreamhunter2333/awsl-passwd",
+            "license": "MIT",
+            "architecture": {
+              "64bit": {
+                "url": "https://github.com/dreamhunter2333/awsl-passwd/releases/download/${TAG_NAME}/wails-passwd_${version}_windows_amd64.zip",
+                "hash": "${sha256}"
+              }
+            },
+            "bin": "wails-passwd.exe",
+            "shortcuts": [
+              [
+                "wails-passwd.exe",
+                "Wails Password"
+              ]
+            ]
+          }
+          EOF
+
+      - name: Commit and push manifest
+        shell: bash
+        working-directory: bucket-repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bucket/wails-passwd.json
+          git commit -m "chore: update wails-passwd to ${{ inputs.tag_name }}" || exit 0
+          git push

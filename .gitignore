@@ -1,6 +1,7 @@
 # Wails bin directory
 build/
 frontend/wailsjs
+WailsPassword
 
 # IDEs
 .idea
