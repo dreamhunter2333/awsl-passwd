@@ -16,7 +16,25 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  resolve-config:
+    runs-on: ubuntu-latest
+    outputs:
+      app_id: ${{ steps.resolve.outputs.app_id }}
+    steps:
+      - name: Resolve release config
+        id: resolve
+        shell: bash
+        run: |
+          app_id="${{ vars.APP_ID }}"
+          if [[ -z "$app_id" ]]; then
+            echo "APP_ID is not set" >&2
+            exit 1
+          fi
+
+          echo "app_id=$app_id" >> "$GITHUB_OUTPUT"
+
   create-release:
+    needs: resolve-config
     runs-on: ubuntu-latest
     outputs:
       tag_name: ${{ steps.prepare.outputs.tag_name }}
@@ -59,20 +77,22 @@ jobs:
 
   update-homebrew:
     needs:
+      - resolve-config
       - create-release
       - build-assets
     uses: ./.github/workflows/update-homebrew.yml
     with:
-      app_id: ${{ vars.APP_ID }}
+      app_id: ${{ needs.resolve-config.outputs.app_id }}
       tag_name: ${{ needs.create-release.outputs.tag_name }}
     secrets: inherit
 
   update-scoop:
     needs:
+      - resolve-config
       - create-release
       - build-assets
     uses: ./.github/workflows/update-scoop.yml
     with:
-      app_id: ${{ vars.APP_ID }}
+      app_id: ${{ needs.resolve-config.outputs.app_id }}
       tag_name: ${{ needs.create-release.outputs.tag_name }}
     secrets: inherit
