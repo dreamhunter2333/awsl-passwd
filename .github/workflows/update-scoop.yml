@@ -3,14 +3,15 @@ name: Update Scoop Bucket
 on:
   workflow_call:
     inputs:
-      app_id:
-        description: GitHub App ID
-        required: true
-        type: string
       tag_name:
         description: Release tag name
         required: true
         type: string
+    secrets:
+      APP_ID:
+        required: true
+      APP_PRIVATE_KEY:
+        required: true
 
 permissions:
   contents: read
@@ -23,7 +24,7 @@ jobs:
         id: app-token
         uses: actions/create-github-app-token@v2
         with:
-          app-id: ${{ inputs.app_id }}
+          app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
           owner: dreamhunter2333
           repositories: |
