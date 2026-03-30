@@ -1,60 +1,98 @@
-# 密码管理器 (WailsPassword)
+# WailsPassword
 
-使用 Wails 框架开发的跨平台密码管理工具。
+[English](README.md) | [简体中文](README.zh-CN.md)
 
-## 功能特性
+A cross-platform password manager built with Wails.
 
-- 账号管理：添加、编辑、删除账号信息
-- 密码存储：安全存储账号名、密码和备注信息
-- 二步验证：支持 TOTP 二步验证
-- 一键复制：支持复制账号名、密码、OTP验证码、备注到剪贴板
-- 本地存储：默认存储在 `~/.wails-passwd/accounts.json`
-- 数据文件切换：支持在界面中选择任意 JSON 文件作为当前账号数据文件
-- 多语言界面：内置中文/English 切换
-- Material Design：前端界面已重构为 Material Design 风格
+## Features
 
-## 构建和运行
+- Manage accounts with create, edit, and delete actions
+- Store account name, password, notes, and TOTP seed locally
+- Generate TOTP codes with countdown refresh
+- Copy account name, password, OTP code, and notes with one click
+- Store data locally in `~/.wails-passwd/accounts.json` by default
+- Switch the active JSON data file from the UI
+- Built-in Chinese and English UI switching
+- Frontend refactored into a Material Design style
 
-### 开发模式
+## Installation
+
+### Homebrew
+
+One-line install:
+
+```bash
+brew install --cask dreamhunter2333/dreamhunter/wails-passwd
+```
+
+Or tap first:
+
+```bash
+brew tap dreamhunter2333/dreamhunter
+brew install --cask wails-passwd
+```
+
+Install after tapping:
+
+```bash
+brew install --cask dreamhunter2333/dreamhunter/wails-passwd
+```
+
+### Scoop
+
+```bash
+scoop bucket add dreamhunter https://github.com/dreamhunter2333/scoop-dreamhunter.git
+scoop install dreamhunter/wails-passwd
+```
+
+### Direct Download
+
+Download the latest release assets from GitHub Releases:
+
+- macOS Apple Silicon: `wails-passwd-macOS-arm64.dmg`
+- macOS Intel: `wails-passwd-macOS-amd64.dmg`
+- Windows: `wails-passwd.exe`
+
+## Development
 
 ```bash
 wails dev
 ```
 
-首次运行后，应用会在 `~/.wails-passwd/settings.json` 中记录当前选择的数据文件路径。
+After the first run, the selected data file path is stored in `~/.wails-passwd/settings.json`.
 
-### 构建
+## Build
 
 ```bash
 wails build
 ```
 
-## 自动发布
+## Release Automation
 
-项目内置 GitHub Actions 发布流程：
+The project includes GitHub Actions workflows for release automation:
 
-- `release.yml`：手动输入版本号，创建 GitHub Release
-- `ci-wails-build.yml`：构建 macOS 和 Windows 发布包并上传到 Release
-- `update-homebrew.yml`：更新 `dreamhunter2333/homebrew-dreamhunter`
-- `update-scoop.yml`：更新 `dreamhunter2333/scoop-dreamhunter`
+- `release.yml`: manually trigger a versioned release
+- `ci-wails-build.yml`: build macOS and Windows assets and upload them to the release
+- `update-homebrew.yml`: update `dreamhunter2333/homebrew-dreamhunter`
+- `update-scoop.yml`: update `dreamhunter2333/scoop-dreamhunter`
 
-当前项目仓库需要配置：
+Repository secrets required for release automation:
 
-- Actions Variable：`APP_ID`
-- Actions Secret：`APP_PRIVATE_KEY`
+- `APP_ID`
+- `APP_PRIVATE_KEY`
 
-同一个 GitHub App 需要安装到以下仓库：
+The GitHub App must be installed on:
 
-- 当前项目仓库
+- this repository
 - `dreamhunter2333/homebrew-dreamhunter`
 - `dreamhunter2333/scoop-dreamhunter`
 
-## 技术栈
+## Tech Stack
 
-- Go 1.23+
-- Wails v2.10.1
+- Go 1.26+
+- Wails v2.12.0
 - HTML/CSS/JavaScript
 
-## 许可证
+## License
 
 MIT
