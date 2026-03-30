@@ -19,24 +19,27 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runner: macos-13
-            platform: darwin/amd64
+          - runner: macos-14
             asset_suffix: darwin_amd64
             archive_ext: tar.gz
             binary_name: wails-passwd
             cgo_ldflags: -framework UniformTypeIdentifiers
+            goos: darwin
+            goarch: amd64
           - runner: macos-14
-            platform: darwin/arm64
             asset_suffix: darwin_arm64
             archive_ext: tar.gz
             binary_name: wails-passwd
             cgo_ldflags: -framework UniformTypeIdentifiers
+            goos: darwin
+            goarch: arm64
           - runner: windows-latest
-            platform: windows/amd64
             asset_suffix: windows_amd64
             archive_ext: zip
             binary_name: wails-passwd.exe
             cgo_ldflags: ""
+            goos: windows
+            goarch: amd64
 
     steps:
       - name: Checkout source
@@ -84,6 +87,9 @@ jobs:
         shell: bash
         env:
           CGO_LDFLAGS: ${{ matrix.cgo_ldflags }}
+          CGO_ENABLED: "1"
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
         run: |
           mkdir -p build/bin
           output="build/bin/${{ matrix.binary_name }}"
@@ -96,6 +102,10 @@ jobs:
       - name: Build app
         if: runner.os == 'Windows'
         shell: pwsh
+        env:
+          CGO_ENABLED: "1"
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
         run: |
           New-Item -ItemType Directory -Path build/bin -Force | Out-Null
           go build `
