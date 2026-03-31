@@ -438,8 +438,10 @@ tbody tr:last-child td {
 }
 
 .otp-box {
-    display: inline-grid;
+    display: inline-flex;
+    align-items: center;
     gap: 8px;
+    flex-wrap: nowrap;
 }
 
 .otp-code {
@@ -459,18 +461,33 @@ tbody tr:last-child td {
     display: inline-flex;
     width: fit-content;
     align-items: center;
-    padding: 4px 8px;
-    border-radius: 999px;
-    background: var(--md-secondary-soft);
+    gap: 6px;
+    padding: 0 2px;
+    border-radius: 0;
+    background: transparent;
     color: var(--md-sys-color-on-surface-variant);
-    font-size: 11px;
-    font-weight: 700;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    opacity: 0.72;
+    font-variant-numeric: tabular-nums;
+}
+
+.otp-timer::before {
+    content: "";
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.6;
+    flex-shrink: 0;
 }
 
 .row-actions {
     display: flex;
     gap: 6px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    white-space: nowrap;
 }
 
 .field-block .icon-action,
@@ -486,6 +503,17 @@ tbody tr:last-child td {
 .otp-code .icon-svg {
     width: 15px;
     height: 15px;
+}
+
+.row-actions [data-action="request-delete"] {
+    color: #b3261e;
+    background: rgba(179, 38, 30, 0.08);
+    box-shadow: inset 0 0 0 1px rgba(179, 38, 30, 0.16);
+}
+
+.row-actions [data-action="request-delete"]:hover:not(:disabled) {
+    color: #ffffff;
+    background: #b3261e;
 }
 
 .icon-action.copied {
