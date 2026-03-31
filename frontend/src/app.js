@@ -35,6 +35,7 @@ function bindEvents() {
     document.addEventListener('click', handleActionClick);
     document.getElementById('encryptionToggle').addEventListener('change', renderSecurityForm);
     document.getElementById('accountForm').addEventListener('submit', handleAccountSubmit);
+    document.getElementById('emptyStateUnlockPassword').addEventListener('keydown', handleUnlockInputKeydown);
     window.addEventListener('click', handleWindowClick);
     window.addEventListener('keydown', handleKeydown);
 }
@@ -279,11 +280,6 @@ async function handleActionClick(event) {
         return;
     }
 
-    if (action === 'focus-unlock') {
-        document.getElementById('quickUnlockPassword')?.focus();
-        return;
-    }
-
     if (action === 'refresh') {
         await refreshAccounts();
         return;
@@ -355,6 +351,15 @@ function handleKeydown(event) {
 
     hideModal('accountModal');
     hideModal('deleteModal');
+}
+
+function handleUnlockInputKeydown(event) {
+    if (event.key !== 'Enter') {
+        return;
+    }
+
+    event.preventDefault();
+    unlockSecurity();
 }
 
 async function loadStorageInfo() {
@@ -451,6 +456,7 @@ function renderSecurityInfo() {
     const toggle = document.getElementById('encryptionToggle');
     const statusChip = document.getElementById('securityStatusChip');
     const addButton = document.getElementById('addAccountButton');
+    const accountLockButton = document.getElementById('accountLockButton');
 
     if (toggle) {
         toggle.checked = securityInfo.encrypted;
@@ -466,28 +472,11 @@ function renderSecurityInfo() {
         addButton.disabled = !canAccessAccounts();
     }
 
-    renderQuickSecurityActions();
+    if (accountLockButton) {
+        accountLockButton.hidden = securityInfoLoadError || !securityInfo.encrypted || !securityInfo.unlocked;
+    }
+
     renderSecurityForm();
-}
-
-function renderQuickSecurityActions() {
-    const controls = document.getElementById('quickSecurityControls');
-    const unlockControls = document.getElementById('quickUnlockControls');
-    const quickUnlockPassword = document.getElementById('quickUnlockPassword');
-    const quickLockButton = document.getElementById('quickLockButton');
-    const showQuickControls = !securityInfoLoadError && securityInfo.encrypted;
-
-    if (!controls || !unlockControls || !quickUnlockPassword || !quickLockButton) {
-        return;
-    }
-
-    controls.hidden = !showQuickControls;
-    unlockControls.hidden = !showQuickControls || securityInfo.unlocked;
-    quickLockButton.hidden = !showQuickControls || !securityInfo.unlocked;
-
-    if (!showQuickControls || securityInfo.unlocked) {
-        quickUnlockPassword.value = '';
-    }
 }
 
 function renderSecurityForm() {
@@ -548,7 +537,7 @@ function resolveSecurityStatusLabel() {
 function resetSecurityInputs() {
     document.getElementById('securityPassword').value = '';
     document.getElementById('securityPasswordConfirm').value = '';
-    document.getElementById('quickUnlockPassword').value = '';
+    document.getElementById('emptyStateUnlockPassword').value = '';
 }
 
 function renderHeaderMeta() {
@@ -700,7 +689,7 @@ async function submitSecurityAction() {
 }
 
 async function unlockSecurity() {
-    const password = document.getElementById('quickUnlockPassword').value;
+    const password = document.getElementById('emptyStateUnlockPassword').value;
     if (!password) {
         showSnackbar(t('securityPasswordRequired'), 'error');
         return;
@@ -754,18 +743,20 @@ async function loadAccounts(options = {}) {
     } catch (error) {
         console.error('load accounts failed:', error);
         accounts = [];
-        renderAccounts();
-        renderStats();
 
         if (normalizeError(error) === '数据文件已加密，请先解锁') {
-            securityInfo = {
+            applySecurityInfo({
                 encrypted: true,
                 unlocked: false
-            };
-            securityInfoLoadError = '';
+            });
             renderSecurityInfo();
+            renderAccounts();
+            renderStats();
             return false;
         }
+
+        renderAccounts();
+        renderStats();
 
         if (!options.silentError) {
             showSnackbar(`${t('loadFailed')}: ${normalizeError(error)}`, 'error');
@@ -836,12 +827,14 @@ function renderEmptyState() {
     const title = document.getElementById('emptyStateTitle');
     const subtitle = document.getElementById('emptyStateSubtitle');
     const action = document.getElementById('emptyStateAction');
+    const unlockPanel = document.getElementById('emptyStateUnlock');
 
-    if (!title || !subtitle || !action) {
+    if (!title || !subtitle || !action || !unlockPanel) {
         return;
     }
 
     if (securityInfoLoadError) {
+        unlockPanel.hidden = true;
         title.textContent = t('fileErrorTitle');
         subtitle.textContent = t('fileErrorSubtitle', {
             error: securityInfoLoadError
@@ -852,13 +845,15 @@ function renderEmptyState() {
     }
 
     if (!canAccessAccounts()) {
+        unlockPanel.hidden = false;
         title.textContent = t('lockedTitle');
-        subtitle.textContent = t('lockedSubtitleCompact');
-        action.textContent = t('unlockInHeader');
-        action.dataset.action = 'focus-unlock';
+        subtitle.textContent = t('lockedSubtitleInline');
+        action.textContent = t('openSettings');
+        action.dataset.action = 'toggle-settings';
         return;
     }
 
+    unlockPanel.hidden = true;
     title.textContent = t('emptyTitle');
     subtitle.textContent = t('emptySubtitle');
     action.textContent = t('addFirstAccount');
