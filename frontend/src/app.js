@@ -33,7 +33,6 @@ document.addEventListener('DOMContentLoaded', async function () {
 
 function bindEvents() {
     document.addEventListener('click', handleActionClick);
-    document.getElementById('encryptionToggle').addEventListener('change', renderSecurityForm);
     document.getElementById('accountForm').addEventListener('submit', handleAccountSubmit);
     document.getElementById('emptyStateUnlockPassword').addEventListener('keydown', handleUnlockInputKeydown);
     window.addEventListener('click', handleWindowClick);
@@ -453,15 +452,9 @@ function renderPreferences() {
 }
 
 function renderSecurityInfo() {
-    const toggle = document.getElementById('encryptionToggle');
     const statusChip = document.getElementById('securityStatusChip');
     const addButton = document.getElementById('addAccountButton');
     const accountLockButton = document.getElementById('accountLockButton');
-
-    if (toggle) {
-        toggle.checked = securityInfo.encrypted;
-        toggle.disabled = Boolean(securityInfoLoadError);
-    }
 
     if (statusChip) {
         statusChip.textContent = resolveSecurityStatusLabel();
@@ -480,14 +473,13 @@ function renderSecurityInfo() {
 }
 
 function renderSecurityForm() {
-    const toggle = document.getElementById('encryptionToggle');
     const passwordField = document.getElementById('securityPasswordField');
     const confirmField = document.getElementById('securityPasswordConfirmField');
     const passwordLabel = document.getElementById('securityPasswordLabel');
     const submitButton = document.getElementById('securitySubmitButton');
     const submitLabel = document.getElementById('securitySubmitLabel');
 
-    if (!toggle || !passwordField || !confirmField || !passwordLabel || !submitButton || !submitLabel) {
+    if (!passwordField || !confirmField || !passwordLabel || !submitButton || !submitLabel) {
         return;
     }
 
@@ -498,13 +490,12 @@ function renderSecurityForm() {
         return;
     }
 
-    const enabling = !securityInfo.encrypted && toggle.checked;
-    const disabling = securityInfo.encrypted && !toggle.checked;
-    const idle = (!securityInfo.encrypted && !toggle.checked) || (securityInfo.encrypted && toggle.checked);
+    const enabling = !securityInfo.encrypted;
+    const disabling = securityInfo.encrypted;
 
-    passwordField.hidden = idle;
+    passwordField.hidden = false;
     confirmField.hidden = !enabling;
-    submitButton.hidden = idle;
+    submitButton.hidden = false;
 
     if (enabling) {
         passwordLabel.textContent = t('securityPasswordNew');
@@ -628,16 +619,11 @@ async function resetConfigFile() {
 }
 
 async function submitSecurityAction() {
-    const toggle = document.getElementById('encryptionToggle');
     const password = document.getElementById('securityPassword').value;
     const confirmPassword = document.getElementById('securityPasswordConfirm').value;
 
-    if (!toggle) {
-        return;
-    }
-
-    const enabling = !securityInfo.encrypted && toggle.checked;
-    const disabling = securityInfo.encrypted && !toggle.checked;
+    const enabling = !securityInfo.encrypted;
+    const disabling = securityInfo.encrypted;
 
     if (!password) {
         showSnackbar(t('securityPasswordRequired'), 'error');
@@ -828,13 +814,17 @@ function renderEmptyState() {
     const subtitle = document.getElementById('emptyStateSubtitle');
     const action = document.getElementById('emptyStateAction');
     const unlockPanel = document.getElementById('emptyStateUnlock');
+    const unlockButton = document.getElementById('emptyStateUnlockButton');
 
-    if (!title || !subtitle || !action || !unlockPanel) {
+    if (!title || !subtitle || !action || !unlockPanel || !unlockButton) {
         return;
     }
 
+    unlockButton.textContent = t('unlockVault');
+
     if (securityInfoLoadError) {
         unlockPanel.hidden = true;
+        action.hidden = false;
         title.textContent = t('fileErrorTitle');
         subtitle.textContent = t('fileErrorSubtitle', {
             error: securityInfoLoadError
@@ -846,14 +836,14 @@ function renderEmptyState() {
 
     if (!canAccessAccounts()) {
         unlockPanel.hidden = false;
+        action.hidden = true;
         title.textContent = t('lockedTitle');
         subtitle.textContent = t('lockedSubtitleInline');
-        action.textContent = t('openSettings');
-        action.dataset.action = 'toggle-settings';
         return;
     }
 
     unlockPanel.hidden = true;
+    action.hidden = false;
     title.textContent = t('emptyTitle');
     subtitle.textContent = t('emptySubtitle');
     action.textContent = t('addFirstAccount');
