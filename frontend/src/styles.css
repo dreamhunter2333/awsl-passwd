@@ -798,10 +798,6 @@ tbody tr:last-child td {
     margin-top: 0;
 }
 
-.empty-card > .md-button {
-    margin-top: 16px;
-}
-
 .modal {
     position: fixed;
     inset: 0;

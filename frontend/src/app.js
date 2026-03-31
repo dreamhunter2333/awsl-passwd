@@ -812,11 +812,10 @@ function renderAccounts() {
 function renderEmptyState() {
     const title = document.getElementById('emptyStateTitle');
     const subtitle = document.getElementById('emptyStateSubtitle');
-    const action = document.getElementById('emptyStateAction');
     const unlockPanel = document.getElementById('emptyStateUnlock');
     const unlockButton = document.getElementById('emptyStateUnlockButton');
 
-    if (!title || !subtitle || !action || !unlockPanel || !unlockButton) {
+    if (!title || !subtitle || !unlockPanel || !unlockButton) {
         return;
     }
 
@@ -824,30 +823,23 @@ function renderEmptyState() {
 
     if (securityInfoLoadError) {
         unlockPanel.hidden = true;
-        action.hidden = false;
         title.textContent = t('fileErrorTitle');
         subtitle.textContent = t('fileErrorSubtitle', {
             error: securityInfoLoadError
         });
-        action.textContent = t('openSettings');
-        action.dataset.action = 'toggle-settings';
         return;
     }
 
     if (!canAccessAccounts()) {
         unlockPanel.hidden = false;
-        action.hidden = true;
         title.textContent = t('lockedTitle');
         subtitle.textContent = t('lockedSubtitleInline');
         return;
     }
 
     unlockPanel.hidden = true;
-    action.hidden = false;
     title.textContent = t('emptyTitle');
     subtitle.textContent = t('emptySubtitle');
-    action.textContent = t('addFirstAccount');
-    action.dataset.action = 'show-add';
 }
 
 function renderAccountRow(account) {
