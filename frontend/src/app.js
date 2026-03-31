@@ -9,6 +9,8 @@ let currentTheme = resolveInitialTheme();
 let currentView = VIEW_ACCOUNTS;
 let accounts = [];
 let storageInfo = null;
+let securityInfo = createDefaultSecurityInfo();
+let securityInfoLoadError = '';
 let currentEditId = '';
 let pendingDeleteId = '';
 let otpTimerInterval = null;
@@ -21,15 +23,32 @@ document.addEventListener('DOMContentLoaded', async function () {
     bindEvents();
     applyTranslations();
     renderView();
-    await initializeApp();
+    try {
+        await initializeApp();
+    } catch (error) {
+        showSnackbar(normalizeError(error), 'error');
+    }
     startOTPRefresh();
 });
 
 function bindEvents() {
     document.addEventListener('click', handleActionClick);
+    document.getElementById('encryptionToggle').addEventListener('change', renderSecurityForm);
     document.getElementById('accountForm').addEventListener('submit', handleAccountSubmit);
     window.addEventListener('click', handleWindowClick);
     window.addEventListener('keydown', handleKeydown);
+}
+
+function createDefaultSecurityInfo() {
+    return {
+        encrypted: false,
+        unlocked: true
+    };
+}
+
+function applySecurityInfo(nextSecurityInfo) {
+    securityInfo = nextSecurityInfo || createDefaultSecurityInfo();
+    securityInfoLoadError = '';
 }
 
 function resolveInitialLanguage() {
@@ -113,6 +132,8 @@ function applyTranslations() {
     renderStats();
     renderStorageInfo();
     renderPreferences();
+    renderSecurityInfo();
+    renderEmptyState();
 }
 
 function renderHeaderControls() {
@@ -210,7 +231,24 @@ function toggleSettingsView() {
 
 async function initializeApp() {
     await loadStorageInfo();
-    await loadAccounts({ silentError: false });
+    await loadSecurityInfo();
+
+    if (canAccessAccounts()) {
+        await loadAccounts({ silentError: false });
+        return;
+    }
+
+    accounts = [];
+    renderAccounts();
+    renderStats();
+}
+
+function canAccessAccounts() {
+    if (securityInfoLoadError) {
+        return false;
+    }
+
+    return !securityInfo.encrypted || securityInfo.unlocked;
 }
 
 async function handleActionClick(event) {
@@ -253,6 +291,16 @@ async function handleActionClick(event) {
 
     if (action === 'reset-config') {
         await resetConfigFile();
+        return;
+    }
+
+    if (action === 'submit-security') {
+        await submitSecurityAction();
+        return;
+    }
+
+    if (action === 'lock-security') {
+        await lockSecurity();
         return;
     }
 
@@ -312,6 +360,26 @@ async function loadStorageInfo() {
     renderPreferences();
 }
 
+async function loadSecurityInfo() {
+    try {
+        applySecurityInfo(await window.go.main.App.GetSecurityInfo());
+    } catch (error) {
+        console.error('load security info failed:', error);
+        securityInfo = createDefaultSecurityInfo();
+        securityInfoLoadError = normalizeError(error);
+        accounts = [];
+        renderSecurityInfo();
+        renderStats();
+        renderAccounts();
+        throw error;
+    }
+
+    accounts = [];
+    renderSecurityInfo();
+    renderStats();
+    renderAccounts();
+}
+
 function renderStorageInfo() {
     const resetButton = document.getElementById('resetConfigButton');
     const currentMode = resolveStorageModeLabel();
@@ -369,6 +437,98 @@ function renderPreferences() {
     setText('currentStorageModeValue', resolveStorageModeLabel());
 }
 
+function renderSecurityInfo() {
+    const toggle = document.getElementById('encryptionToggle');
+    const statusChip = document.getElementById('securityStatusChip');
+    const addButton = document.getElementById('addAccountButton');
+
+    if (toggle) {
+        toggle.checked = securityInfo.encrypted;
+        toggle.disabled = Boolean(securityInfoLoadError);
+    }
+
+    if (statusChip) {
+        statusChip.textContent = resolveSecurityStatusLabel();
+        statusChip.classList.toggle('custom', !securityInfoLoadError && securityInfo.encrypted && securityInfo.unlocked);
+    }
+
+    if (addButton) {
+        addButton.disabled = !canAccessAccounts();
+    }
+
+    renderSecurityForm();
+}
+
+function renderSecurityForm() {
+    const toggle = document.getElementById('encryptionToggle');
+    const passwordField = document.getElementById('securityPasswordField');
+    const confirmField = document.getElementById('securityPasswordConfirmField');
+    const passwordLabel = document.getElementById('securityPasswordLabel');
+    const submitButton = document.getElementById('securitySubmitButton');
+    const submitLabel = document.getElementById('securitySubmitLabel');
+    const lockButton = document.getElementById('securityLockButton');
+
+    if (!toggle || !passwordField || !confirmField || !passwordLabel || !submitButton || !submitLabel || !lockButton) {
+        return;
+    }
+
+    if (securityInfoLoadError) {
+        passwordField.hidden = true;
+        confirmField.hidden = true;
+        submitButton.hidden = true;
+        lockButton.hidden = true;
+        return;
+    }
+
+    const enabling = !securityInfo.encrypted && toggle.checked;
+    const disabling = securityInfo.encrypted && !toggle.checked;
+    const unlocking = securityInfo.encrypted && !securityInfo.unlocked && toggle.checked;
+    const idle = (!securityInfo.encrypted && !toggle.checked) || (securityInfo.encrypted && securityInfo.unlocked && toggle.checked);
+
+    passwordField.hidden = idle;
+    confirmField.hidden = !enabling;
+    lockButton.hidden = !(securityInfo.encrypted && securityInfo.unlocked && toggle.checked);
+    submitButton.hidden = idle;
+
+    if (enabling) {
+        passwordLabel.textContent = t('securityPasswordNew');
+        submitLabel.textContent = t('enableEncryptionAction');
+        return;
+    }
+
+    if (disabling) {
+        passwordLabel.textContent = t('securityPasswordCurrent');
+        submitLabel.textContent = t('disableEncryptionAction');
+        return;
+    }
+
+    if (unlocking) {
+        passwordLabel.textContent = t('securityPasswordCurrent');
+        submitLabel.textContent = t('unlockVault');
+    }
+}
+
+function resolveSecurityStatusLabel() {
+    if (securityInfoLoadError) {
+        return t('securityStatusError');
+    }
+
+    if (!securityInfo.encrypted) {
+        return t('securityStatusPlain');
+    }
+
+    if (securityInfo.unlocked) {
+        return t('securityStatusUnlocked');
+    }
+
+    return t('securityStatusLocked');
+}
+
+function resetSecurityInputs() {
+    document.getElementById('securityPassword').value = '';
+    document.getElementById('securityPasswordConfirm').value = '';
+}
+
 function renderHeaderMeta() {
     const headerMeta = document.getElementById('headerMeta');
     if (!headerMeta) {
@@ -377,6 +537,20 @@ function renderHeaderMeta() {
 
     if (!storageInfo) {
         headerMeta.textContent = t('headerMetaLoading');
+        return;
+    }
+
+    if (securityInfoLoadError) {
+        headerMeta.textContent = t('headerMetaError', {
+            mode: resolveStorageModeLabel()
+        });
+        return;
+    }
+
+    if (!canAccessAccounts()) {
+        headerMeta.textContent = t('headerMetaLocked', {
+            mode: resolveStorageModeLabel()
+        });
         return;
     }
 
@@ -396,10 +570,17 @@ async function selectConfigFile() {
 
         storageInfo = nextStorageInfo;
         renderStorageInfo();
+        await loadSecurityInfo();
 
-        const loaded = await loadAccounts({ silentError: false });
-        if (!loaded) {
-            return;
+        if (canAccessAccounts()) {
+            const loaded = await loadAccounts({ silentError: false });
+            if (!loaded) {
+                return;
+            }
+        } else {
+            accounts = [];
+            renderAccounts();
+            renderStats();
         }
 
         showSnackbar(t('fileChanged'));
@@ -416,16 +597,104 @@ async function resetConfigFile() {
     try {
         storageInfo = await window.go.main.App.ResetConfigFile();
         renderStorageInfo();
+        await loadSecurityInfo();
 
-        const loaded = await loadAccounts({ silentError: false });
-        if (!loaded) {
-            return;
+        if (canAccessAccounts()) {
+            const loaded = await loadAccounts({ silentError: false });
+            if (!loaded) {
+                return;
+            }
+        } else {
+            accounts = [];
+            renderAccounts();
+            renderStats();
         }
 
         showSnackbar(t('fileReset'));
     } catch (error) {
         showSnackbar(`${t('fileResetFailed')}: ${normalizeError(error)}`, 'error');
     }
+}
+
+async function submitSecurityAction() {
+    const toggle = document.getElementById('encryptionToggle');
+    const password = document.getElementById('securityPassword').value;
+    const confirmPassword = document.getElementById('securityPasswordConfirm').value;
+
+    if (!toggle) {
+        return;
+    }
+
+    const enabling = !securityInfo.encrypted && toggle.checked;
+    const disabling = securityInfo.encrypted && !toggle.checked;
+    const unlocking = securityInfo.encrypted && !securityInfo.unlocked && toggle.checked;
+
+    if (!password) {
+        showSnackbar(t('securityPasswordRequired'), 'error');
+        return;
+    }
+
+    try {
+        if (enabling) {
+            if (password !== confirmPassword) {
+                showSnackbar(t('securityPasswordMismatch'), 'error');
+                return;
+            }
+
+            applySecurityInfo(await window.go.main.App.EnableEncryption(password));
+            resetSecurityInputs();
+            renderSecurityInfo();
+            await loadAccounts({ silentError: false });
+            showSnackbar(t('securityEnableSuccess'));
+            return;
+        }
+
+        if (disabling) {
+            applySecurityInfo(await window.go.main.App.DisableEncryption(password));
+            resetSecurityInputs();
+            renderSecurityInfo();
+            await loadAccounts({ silentError: false });
+            showSnackbar(t('securityDisableSuccess'));
+            return;
+        }
+
+        if (unlocking) {
+            applySecurityInfo(await window.go.main.App.UnlockDataFile(password));
+            resetSecurityInputs();
+            renderSecurityInfo();
+            await loadAccounts({ silentError: false });
+            showSnackbar(t('securityUnlockSuccess'));
+            return;
+        }
+
+        resetSecurityInputs();
+        renderSecurityInfo();
+    } catch (error) {
+        const errorMessage = normalizeError(error);
+        resetSecurityInputs();
+
+        try {
+            await loadSecurityInfo();
+
+            if (canAccessAccounts()) {
+                await loadAccounts({ silentError: true });
+            }
+        } catch (refreshError) {
+            console.error('reload security info failed:', refreshError);
+        }
+
+        showSnackbar(errorMessage, 'error');
+    }
+}
+
+async function lockSecurity() {
+    applySecurityInfo(await window.go.main.App.LockDataFile());
+    accounts = [];
+    resetSecurityInputs();
+    renderSecurityInfo();
+    renderAccounts();
+    renderStats();
+    showSnackbar(t('securityLockSuccess'));
 }
 
 async function loadAccounts(options = {}) {
@@ -446,6 +715,16 @@ async function loadAccounts(options = {}) {
         renderAccounts();
         renderStats();
 
+        if (normalizeError(error) === '数据文件已加密，请先解锁') {
+            securityInfo = {
+                encrypted: true,
+                unlocked: false
+            };
+            securityInfoLoadError = '';
+            renderSecurityInfo();
+            return false;
+        }
+
         if (!options.silentError) {
             showSnackbar(`${t('loadFailed')}: ${normalizeError(error)}`, 'error');
         }
@@ -457,12 +736,20 @@ async function loadAccounts(options = {}) {
 }
 
 function renderStats() {
-    setText('recordsStatus', t('recordsStatus', {
-        count: String(accounts.length)
-    }));
-    setText('otpStatus', t('otpStatus', {
-        count: String(getOTPEnabledCount())
-    }));
+    if (securityInfoLoadError) {
+        setText('recordsStatus', t('securityStatusError'));
+        setText('otpStatus', t('openSettings'));
+    } else if (!canAccessAccounts()) {
+        setText('recordsStatus', t('securityStatusLocked'));
+        setText('otpStatus', t('unlockVault'));
+    } else {
+        setText('recordsStatus', t('recordsStatus', {
+            count: String(accounts.length)
+        }));
+        setText('otpStatus', t('otpStatus', {
+            count: String(getOTPEnabledCount())
+        }));
+    }
 
     if (!storageInfo) {
         setText('storageModeChip', '-');
@@ -482,16 +769,58 @@ function renderAccounts() {
     const tableShell = document.getElementById('accountsTableShell');
     const emptyState = document.getElementById('emptyState');
 
+    if (!canAccessAccounts()) {
+        accountsList.innerHTML = '';
+        tableShell.style.display = 'none';
+        emptyState.style.display = 'grid';
+        renderEmptyState();
+        return;
+    }
+
     if (accounts.length === 0) {
         accountsList.innerHTML = '';
         tableShell.style.display = 'none';
         emptyState.style.display = 'grid';
+        renderEmptyState();
         return;
     }
 
     tableShell.style.display = 'block';
     emptyState.style.display = 'none';
     accountsList.innerHTML = accounts.map(renderAccountRow).join('');
+}
+
+function renderEmptyState() {
+    const title = document.getElementById('emptyStateTitle');
+    const subtitle = document.getElementById('emptyStateSubtitle');
+    const action = document.getElementById('emptyStateAction');
+
+    if (!title || !subtitle || !action) {
+        return;
+    }
+
+    if (securityInfoLoadError) {
+        title.textContent = t('fileErrorTitle');
+        subtitle.textContent = t('fileErrorSubtitle', {
+            error: securityInfoLoadError
+        });
+        action.textContent = t('openSettings');
+        action.dataset.action = 'toggle-settings';
+        return;
+    }
+
+    if (!canAccessAccounts()) {
+        title.textContent = t('lockedTitle');
+        subtitle.textContent = t('lockedSubtitle');
+        action.textContent = t('unlockInSettings');
+        action.dataset.action = 'toggle-settings';
+        return;
+    }
+
+    title.textContent = t('emptyTitle');
+    subtitle.textContent = t('emptySubtitle');
+    action.textContent = t('addFirstAccount');
+    action.dataset.action = 'show-add';
 }
 
 function renderAccountRow(account) {
@@ -743,13 +1072,23 @@ async function refreshAccounts() {
     }
 
     try {
-        const loaded = await loadAccounts({ silentError: false });
         await loadStorageInfo();
-        if (!loaded) {
-            return;
+        await loadSecurityInfo();
+
+        if (canAccessAccounts()) {
+            const loaded = await loadAccounts({ silentError: false });
+            if (!loaded) {
+                return;
+            }
+        } else {
+            accounts = [];
+            renderAccounts();
+            renderStats();
         }
 
         showSnackbar(t('refreshed'));
+    } catch (error) {
+        showSnackbar(normalizeError(error), 'error');
     } finally {
         if (refreshButton) {
             refreshButton.disabled = false;

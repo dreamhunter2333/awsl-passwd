@@ -72,6 +72,16 @@ func (a *App) GetStorageInfo() *StorageInfo {
 	return &info
 }
 
+// GetSecurityInfo 获取当前数据文件安全状态
+func (a *App) GetSecurityInfo() (*SecurityInfo, error) {
+	info, err := a.manager.GetSecurityInfo()
+	if err != nil {
+		return &info, err
+	}
+
+	return &info, nil
+}
+
 // SetConfigFilePath 设置数据文件路径
 func (a *App) SetConfigFilePath(filePath string) (*StorageInfo, error) {
 	if filePath == "" {
@@ -123,6 +133,40 @@ func (a *App) ResetConfigFile() (*StorageInfo, error) {
 	}
 
 	return a.GetStorageInfo(), nil
+}
+
+// EnableEncryption 启用数据文件加密
+func (a *App) EnableEncryption(password string) (*SecurityInfo, error) {
+	if err := a.manager.EnableEncryption(password); err != nil {
+		return nil, err
+	}
+
+	return a.GetSecurityInfo()
+}
+
+// DisableEncryption 禁用数据文件加密
+func (a *App) DisableEncryption(password string) (*SecurityInfo, error) {
+	if err := a.manager.DisableEncryption(password); err != nil {
+		return nil, err
+	}
+
+	return a.GetSecurityInfo()
+}
+
+// UnlockDataFile 解锁当前加密文件
+func (a *App) UnlockDataFile(password string) (*SecurityInfo, error) {
+	if err := a.manager.Unlock(password); err != nil {
+		return nil, err
+	}
+
+	return a.GetSecurityInfo()
+}
+
+// LockDataFile 锁定当前加密文件
+func (a *App) LockDataFile() *SecurityInfo {
+	a.manager.Lock()
+	info, _ := a.manager.GetSecurityInfo()
+	return &info
 }
 
 // GetAccounts 获取所有账号列表

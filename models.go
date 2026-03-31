@@ -50,6 +50,8 @@ type AppSettings struct {
 type PasswordManager struct {
 	configDir    string
 	dataFilePath string
+	sessionKey   []byte
+	kdfConfig    *VaultKDFConfig
 }
 
 // NewPasswordManager 创建密码管理器实例
@@ -60,6 +62,11 @@ func NewPasswordManager() *PasswordManager {
 	}
 
 	configDir := filepath.Join(homeDir, ".wails-passwd")
+
+	return newPasswordManagerWithConfigDir(configDir)
+}
+
+func newPasswordManagerWithConfigDir(configDir string) *PasswordManager {
 
 	// 确保目录存在
 	if err := os.MkdirAll(configDir, 0700); err != nil {
@@ -129,6 +136,7 @@ func (pm *PasswordManager) SetDataFile(dataFilePath string) error {
 		return err
 	}
 
+	pm.clearSecuritySession()
 	pm.dataFilePath = normalizedPath
 	return nil
 }
@@ -222,20 +230,33 @@ func (pm *PasswordManager) normalizeDataFilePath(dataFilePath string) (string, e
 
 // loadAccounts 从文件加载账号列表
 func (pm *PasswordManager) loadAccounts() ([]Account, error) {
-	filePath := pm.getDataFile()
-
-	// 如果文件不存在，返回空列表
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return []Account{}, nil
-	}
-
-	data, err := os.ReadFile(filePath)
+	data, err := pm.readDataFile()
 	if err != nil {
-		return nil, fmt.Errorf("读取账号文件失败: %v", err)
+		return nil, err
 	}
 
 	if len(data) == 0 {
 		return []Account{}, nil
+	}
+
+	payload, encrypted, err := parseEncryptedVaultFile(data)
+	if err != nil {
+		return nil, err
+	}
+
+	if encrypted {
+		if len(pm.sessionKey) == 0 {
+			return nil, ErrVaultLocked
+		}
+
+		accounts, decryptErr := decryptAccounts(*payload, pm.sessionKey)
+		if decryptErr != nil {
+			pm.clearSecuritySession()
+			return nil, ErrVaultLocked
+		}
+
+		pm.kdfConfig = &payload.KDF
+		return accounts, nil
 	}
 
 	var accounts []Account
@@ -248,14 +269,14 @@ func (pm *PasswordManager) loadAccounts() ([]Account, error) {
 
 // saveAccounts 保存账号列表到文件
 func (pm *PasswordManager) saveAccounts(accounts []Account) error {
-	data, err := json.MarshalIndent(accounts, "", "  ")
-	if err != nil {
-		return fmt.Errorf("序列化账号数据失败: %v", err)
-	}
-
 	filePath := pm.getDataFile()
 	if err := os.MkdirAll(filepath.Dir(filePath), 0700); err != nil {
 		return fmt.Errorf("创建账号文件目录失败: %w", err)
+	}
+
+	data, err := pm.marshalAccountsForStorage(accounts)
+	if err != nil {
+		return err
 	}
 
 	if err := os.WriteFile(filePath, data, 0600); err != nil {
