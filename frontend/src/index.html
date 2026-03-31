@@ -59,10 +59,22 @@
                         <h2 data-i18n="accountsTitle"></h2>
                         <p class="section-heading-copy" data-i18n="accountsSubtitleCompact"></p>
                     </div>
-                    <div class="panel-tools summary-pills">
-                        <span class="status-pill" id="recordsStatus">0</span>
-                        <span class="status-pill" id="otpStatus">0</span>
-                        <span class="mode-chip" id="storageModeChip">-</span>
+                    <div class="panel-tools account-toolbar">
+                        <div class="quick-security" id="quickSecurityControls" hidden>
+                            <div class="quick-security-unlock" id="quickUnlockControls" hidden>
+                                <input class="quick-security-input" data-i18n-placeholder="securityPasswordCurrent"
+                                    id="quickUnlockPassword" type="password">
+                                <button class="md-button filled quick-security-button" data-action="unlock-security"
+                                    data-i18n="unlockVault" id="quickUnlockButton" type="button"></button>
+                            </div>
+                            <button class="md-button outlined quick-security-button" data-action="lock-security"
+                                data-i18n="lockVault" id="quickLockButton" type="button" hidden></button>
+                        </div>
+                        <div class="summary-pills">
+                            <span class="status-pill" id="recordsStatus">0</span>
+                            <span class="status-pill" id="otpStatus">0</span>
+                            <span class="mode-chip" id="storageModeChip">-</span>
+                        </div>
                     </div>
                 </div>
 
@@ -178,8 +190,6 @@
                                 type="button">
                                 <span id="securitySubmitLabel"></span>
                             </button>
-                            <button class="md-button outlined" data-action="lock-security" id="securityLockButton"
-                                data-i18n="lockVault" type="button"></button>
                         </div>
                     </article>
 

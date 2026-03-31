@@ -279,6 +279,11 @@ async function handleActionClick(event) {
         return;
     }
 
+    if (action === 'focus-unlock') {
+        document.getElementById('quickUnlockPassword')?.focus();
+        return;
+    }
+
     if (action === 'refresh') {
         await refreshAccounts();
         return;
@@ -296,6 +301,11 @@ async function handleActionClick(event) {
 
     if (action === 'submit-security') {
         await submitSecurityAction();
+        return;
+    }
+
+    if (action === 'unlock-security') {
+        await unlockSecurity();
         return;
     }
 
@@ -456,7 +466,28 @@ function renderSecurityInfo() {
         addButton.disabled = !canAccessAccounts();
     }
 
+    renderQuickSecurityActions();
     renderSecurityForm();
+}
+
+function renderQuickSecurityActions() {
+    const controls = document.getElementById('quickSecurityControls');
+    const unlockControls = document.getElementById('quickUnlockControls');
+    const quickUnlockPassword = document.getElementById('quickUnlockPassword');
+    const quickLockButton = document.getElementById('quickLockButton');
+    const showQuickControls = !securityInfoLoadError && securityInfo.encrypted;
+
+    if (!controls || !unlockControls || !quickUnlockPassword || !quickLockButton) {
+        return;
+    }
+
+    controls.hidden = !showQuickControls;
+    unlockControls.hidden = !showQuickControls || securityInfo.unlocked;
+    quickLockButton.hidden = !showQuickControls || !securityInfo.unlocked;
+
+    if (!showQuickControls || securityInfo.unlocked) {
+        quickUnlockPassword.value = '';
+    }
 }
 
 function renderSecurityForm() {
@@ -466,9 +497,8 @@ function renderSecurityForm() {
     const passwordLabel = document.getElementById('securityPasswordLabel');
     const submitButton = document.getElementById('securitySubmitButton');
     const submitLabel = document.getElementById('securitySubmitLabel');
-    const lockButton = document.getElementById('securityLockButton');
 
-    if (!toggle || !passwordField || !confirmField || !passwordLabel || !submitButton || !submitLabel || !lockButton) {
+    if (!toggle || !passwordField || !confirmField || !passwordLabel || !submitButton || !submitLabel) {
         return;
     }
 
@@ -476,18 +506,15 @@ function renderSecurityForm() {
         passwordField.hidden = true;
         confirmField.hidden = true;
         submitButton.hidden = true;
-        lockButton.hidden = true;
         return;
     }
 
     const enabling = !securityInfo.encrypted && toggle.checked;
     const disabling = securityInfo.encrypted && !toggle.checked;
-    const unlocking = securityInfo.encrypted && !securityInfo.unlocked && toggle.checked;
-    const idle = (!securityInfo.encrypted && !toggle.checked) || (securityInfo.encrypted && securityInfo.unlocked && toggle.checked);
+    const idle = (!securityInfo.encrypted && !toggle.checked) || (securityInfo.encrypted && toggle.checked);
 
     passwordField.hidden = idle;
     confirmField.hidden = !enabling;
-    lockButton.hidden = !(securityInfo.encrypted && securityInfo.unlocked && toggle.checked);
     submitButton.hidden = idle;
 
     if (enabling) {
@@ -499,12 +526,6 @@ function renderSecurityForm() {
     if (disabling) {
         passwordLabel.textContent = t('securityPasswordCurrent');
         submitLabel.textContent = t('disableEncryptionAction');
-        return;
-    }
-
-    if (unlocking) {
-        passwordLabel.textContent = t('securityPasswordCurrent');
-        submitLabel.textContent = t('unlockVault');
     }
 }
 
@@ -527,6 +548,7 @@ function resolveSecurityStatusLabel() {
 function resetSecurityInputs() {
     document.getElementById('securityPassword').value = '';
     document.getElementById('securityPasswordConfirm').value = '';
+    document.getElementById('quickUnlockPassword').value = '';
 }
 
 function renderHeaderMeta() {
@@ -627,7 +649,6 @@ async function submitSecurityAction() {
 
     const enabling = !securityInfo.encrypted && toggle.checked;
     const disabling = securityInfo.encrypted && !toggle.checked;
-    const unlocking = securityInfo.encrypted && !securityInfo.unlocked && toggle.checked;
 
     if (!password) {
         showSnackbar(t('securityPasswordRequired'), 'error');
@@ -658,15 +679,6 @@ async function submitSecurityAction() {
             return;
         }
 
-        if (unlocking) {
-            applySecurityInfo(await window.go.main.App.UnlockDataFile(password));
-            resetSecurityInputs();
-            renderSecurityInfo();
-            await loadAccounts({ silentError: false });
-            showSnackbar(t('securityUnlockSuccess'));
-            return;
-        }
-
         resetSecurityInputs();
         renderSecurityInfo();
     } catch (error) {
@@ -676,6 +688,36 @@ async function submitSecurityAction() {
         try {
             await loadSecurityInfo();
 
+            if (canAccessAccounts()) {
+                await loadAccounts({ silentError: true });
+            }
+        } catch (refreshError) {
+            console.error('reload security info failed:', refreshError);
+        }
+
+        showSnackbar(errorMessage, 'error');
+    }
+}
+
+async function unlockSecurity() {
+    const password = document.getElementById('quickUnlockPassword').value;
+    if (!password) {
+        showSnackbar(t('securityPasswordRequired'), 'error');
+        return;
+    }
+
+    try {
+        applySecurityInfo(await window.go.main.App.UnlockDataFile(password));
+        resetSecurityInputs();
+        renderSecurityInfo();
+        await loadAccounts({ silentError: false });
+        showSnackbar(t('securityUnlockSuccess'));
+    } catch (error) {
+        const errorMessage = normalizeError(error);
+        resetSecurityInputs();
+
+        try {
+            await loadSecurityInfo();
             if (canAccessAccounts()) {
                 await loadAccounts({ silentError: true });
             }
@@ -811,9 +853,9 @@ function renderEmptyState() {
 
     if (!canAccessAccounts()) {
         title.textContent = t('lockedTitle');
-        subtitle.textContent = t('lockedSubtitle');
-        action.textContent = t('unlockInSettings');
-        action.dataset.action = 'toggle-settings';
+        subtitle.textContent = t('lockedSubtitleCompact');
+        action.textContent = t('unlockInHeader');
+        action.dataset.action = 'focus-unlock';
         return;
     }
 

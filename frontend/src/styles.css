@@ -344,6 +344,53 @@ button {
     justify-content: flex-end;
 }
 
+.account-toolbar {
+    gap: 12px;
+}
+
+.summary-pills {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.quick-security,
+.quick-security-unlock {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.quick-security[hidden],
+.quick-security-unlock[hidden],
+.quick-security-button[hidden] {
+    display: none !important;
+}
+
+.quick-security-input {
+    width: min(210px, 34vw);
+    min-height: 36px;
+    padding: 0 12px;
+    border: 1px solid var(--md-sys-color-outline);
+    border-radius: 999px;
+    background: var(--md-sys-color-surface-container-high);
+    color: var(--md-sys-color-on-surface);
+    transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+}
+
+.quick-security-input:focus {
+    outline: none;
+    border-color: var(--md-focus-border);
+    box-shadow: 0 0 0 4px var(--md-focus-ring);
+}
+
+.quick-security-button {
+    min-height: 36px;
+    padding-inline: 14px;
+}
+
 .status-pill,
 .mode-chip {
     display: inline-flex;
@@ -517,12 +564,12 @@ tbody tr:last-child td {
 }
 
 .settings-card {
-    padding: 14px;
-    border-radius: 16px;
+    padding: 12px;
+    border-radius: 14px;
     background: var(--md-sys-color-surface-strong);
     box-shadow: inset 0 0 0 1px var(--md-sys-color-outline);
     display: grid;
-    gap: 18px;
+    gap: 14px;
 }
 
 .section-heading {
@@ -532,14 +579,24 @@ tbody tr:last-child td {
     gap: 16px;
 }
 
+.settings-view .section-heading h3 {
+    font-size: 16px;
+}
+
+.settings-view .section-heading p,
+.settings-view .assist-note {
+    font-size: 12px;
+    line-height: 1.5;
+}
+
 .storage-stack {
     display: grid;
-    gap: 12px;
+    gap: 10px;
 }
 
 .storage-item {
-    padding: 12px 14px;
-    border-radius: 14px;
+    padding: 10px 12px;
+    border-radius: 12px;
     background: var(--md-sys-color-surface-container-high);
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
@@ -553,14 +610,14 @@ tbody tr:last-child td {
 }
 
 .storage-path {
-    margin-top: 8px;
-    line-height: 1.7;
+    margin-top: 6px;
+    line-height: 1.6;
     word-break: break-all;
 }
 
 .storage-actions {
     display: flex;
-    gap: 12px;
+    gap: 10px;
     flex-wrap: wrap;
 }
 
@@ -572,17 +629,17 @@ tbody tr:last-child td {
 }
 
 .security-toggle-title {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 800;
 }
 
 .compact-form {
-    gap: 12px;
+    gap: 10px;
 }
 
 .security-actions {
     display: flex;
-    gap: 12px;
+    gap: 10px;
     flex-wrap: wrap;
 }
 
@@ -639,7 +696,7 @@ tbody tr:last-child td {
 
 .preference-list {
     display: grid;
-    gap: 10px;
+    gap: 8px;
 }
 
 .preference-item {
@@ -647,8 +704,8 @@ tbody tr:last-child td {
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    padding: 12px 14px;
-    border-radius: 14px;
+    padding: 10px 12px;
+    border-radius: 12px;
     background: var(--md-sys-color-surface-container-high);
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
@@ -658,8 +715,31 @@ tbody tr:last-child td {
 }
 
 .preference-item strong {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 800;
+}
+
+.settings-view .md-button {
+    min-height: 36px;
+    padding: 0 14px;
+    font-size: 12px;
+}
+
+.settings-view .button-icon,
+.settings-view .icon-svg {
+    width: 16px;
+    height: 16px;
+}
+
+.settings-view .field label {
+    font-size: 11px;
+}
+
+.settings-view .field input,
+.settings-view .field textarea {
+    padding: 12px 14px;
+    border-radius: 12px;
+    font-size: 13px;
 }
 
 .empty-state {
@@ -862,17 +942,26 @@ tbody tr:last-child td {
     .section-heading,
     .security-toggle-row,
     .security-actions,
+    .account-toolbar,
+    .quick-security,
+    .quick-security-unlock,
     .dialog-actions,
     .storage-actions {
         flex-direction: column;
     }
 
     .panel-tools,
+    .summary-pills,
     .security-actions .md-button,
+    .quick-security .md-button,
     .storage-actions .md-button,
     .dialog-actions .md-button {
         width: 100%;
         justify-content: flex-start;
+    }
+
+    .quick-security-input {
+        width: 100%;
     }
 
     .compact-add {
