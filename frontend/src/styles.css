@@ -23,12 +23,12 @@
     --md-secondary-soft: rgba(95, 109, 126, 0.14);
     --md-focus-border: rgba(12, 99, 206, 0.42);
     --md-focus-ring: rgba(12, 99, 206, 0.14);
-    --md-elevation-1: 0 10px 28px rgba(17, 25, 40, 0.08), 0 2px 6px rgba(17, 25, 40, 0.05);
-    --md-elevation-2: 0 18px 36px rgba(15, 23, 42, 0.12), 0 10px 18px rgba(15, 23, 42, 0.08);
-    --md-radius-xl: 28px;
-    --md-radius-lg: 22px;
-    --md-radius-md: 16px;
-    --md-radius-sm: 12px;
+    --md-elevation-1: 0 6px 18px rgba(17, 25, 40, 0.06), 0 1px 3px rgba(17, 25, 40, 0.04);
+    --md-elevation-2: 0 14px 28px rgba(15, 23, 42, 0.1), 0 6px 14px rgba(15, 23, 42, 0.06);
+    --md-radius-xl: 20px;
+    --md-radius-lg: 16px;
+    --md-radius-md: 12px;
+    --md-radius-sm: 10px;
 }
 
 :root[data-theme="dark"] {
@@ -56,8 +56,8 @@
     --md-secondary-soft: rgba(174, 188, 208, 0.16);
     --md-focus-border: rgba(158, 200, 255, 0.46);
     --md-focus-ring: rgba(158, 200, 255, 0.18);
-    --md-elevation-1: 0 18px 30px rgba(0, 0, 0, 0.26), 0 2px 8px rgba(0, 0, 0, 0.32);
-    --md-elevation-2: 0 26px 44px rgba(0, 0, 0, 0.34), 0 12px 22px rgba(0, 0, 0, 0.28);
+    --md-elevation-1: 0 10px 24px rgba(0, 0, 0, 0.22), 0 2px 6px rgba(0, 0, 0, 0.24);
+    --md-elevation-2: 0 20px 36px rgba(0, 0, 0, 0.3), 0 8px 18px rgba(0, 0, 0, 0.24);
 }
 
 * {
@@ -76,8 +76,8 @@ body {
     font-family: "SF Pro Text", "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
     color: var(--md-sys-color-on-surface);
     background:
-        radial-gradient(circle at top left, rgba(12, 99, 206, 0.12), transparent 28%),
-        radial-gradient(circle at top right, rgba(0, 127, 133, 0.12), transparent 32%),
+        radial-gradient(circle at top left, rgba(12, 99, 206, 0.08), transparent 26%),
+        radial-gradient(circle at top right, rgba(0, 127, 133, 0.08), transparent 28%),
         linear-gradient(180deg, var(--md-sys-color-background) 0%, var(--md-sys-color-background-end) 100%);
 }
 
@@ -91,7 +91,7 @@ body::before {
         linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
     background-size: 24px 24px;
     mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.14), transparent 72%);
-    opacity: 0.5;
+    opacity: 0.18;
 }
 
 button,
@@ -118,7 +118,7 @@ button {
     border-radius: var(--md-radius-xl);
     background: var(--md-sys-color-surface);
     box-shadow: var(--md-elevation-1);
-    backdrop-filter: blur(18px);
+    backdrop-filter: blur(10px);
 }
 
 .panel::after {
@@ -127,7 +127,7 @@ button {
     inset: 0;
     border-radius: inherit;
     pointer-events: none;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
 .topbar {
@@ -135,44 +135,49 @@ button {
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    min-height: 78px;
-    padding: 14px 18px;
+    min-height: 60px;
+    padding: 10px 16px;
 }
 
 .topbar-brand {
     display: flex;
     align-items: center;
     gap: 14px;
+    flex: 1;
     min-width: 0;
 }
 
 .topbar-mark {
-    width: 44px;
-    height: 44px;
-    border-radius: 16px;
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
     display: grid;
     place-items: center;
     color: var(--md-sys-color-on-primary);
-    background: linear-gradient(135deg, var(--md-sys-color-primary), var(--md-sys-color-tertiary));
-    box-shadow: 0 14px 28px rgba(12, 99, 206, 0.22);
+    background: var(--md-sys-color-primary);
+    box-shadow: none;
     flex-shrink: 0;
 }
 
 .topbar-copy {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     min-width: 0;
 }
 
 .topbar-copy h1 {
-    font-size: 20px;
+    flex-shrink: 0;
+    font-size: 17px;
     font-weight: 800;
     letter-spacing: -0.03em;
+    line-height: 1;
 }
 
 .topbar-copy p {
-    margin-top: 4px;
     color: var(--md-sys-color-on-surface-variant);
-    font-size: 13px;
-    line-height: 1.4;
+    font-size: 11px;
+    line-height: 1;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -182,8 +187,9 @@ button {
     display: flex;
     align-items: center;
     gap: 10px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     justify-content: flex-end;
+    margin-left: auto;
 }
 
 .md-button {
@@ -191,10 +197,10 @@ button {
     align-items: center;
     justify-content: center;
     gap: 8px;
-    min-height: 42px;
-    padding: 0 18px;
+    min-height: 38px;
+    padding: 0 16px;
     border-radius: 999px;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
     letter-spacing: 0.01em;
     transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease, color 0.18s ease;
@@ -214,7 +220,7 @@ button {
 .md-button.filled {
     background: var(--md-sys-color-primary);
     color: var(--md-sys-color-on-primary);
-    box-shadow: 0 12px 20px rgba(12, 99, 206, 0.22);
+    box-shadow: none;
 }
 
 .md-button.outlined {
@@ -235,9 +241,9 @@ button {
 
 .icon-action,
 .compact-toggle {
-    width: 42px;
-    height: 42px;
-    border-radius: 14px;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -261,9 +267,9 @@ button {
 
 .text-toggle {
     width: auto;
-    min-width: 52px;
-    padding-inline: 14px;
-    font-size: 13px;
+    min-width: 44px;
+    padding-inline: 12px;
+    font-size: 12px;
     font-weight: 800;
     letter-spacing: 0.04em;
 }
@@ -287,11 +293,11 @@ button {
 }
 
 .workspace {
-    margin-top: 16px;
+    margin-top: 12px;
 }
 
 .view-panel {
-    padding: 18px;
+    padding: 14px;
 }
 
 .view-panel[hidden] {
@@ -306,12 +312,12 @@ button {
 }
 
 .panel-header.dense {
-    margin-bottom: 18px;
+    margin-bottom: 12px;
 }
 
 .panel-header h2,
 .section-heading h3 {
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 800;
     letter-spacing: -0.03em;
 }
@@ -322,8 +328,12 @@ button {
 .dialog-copy {
     margin-top: 6px;
     color: var(--md-sys-color-on-surface-variant);
-    font-size: 14px;
-    line-height: 1.65;
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+#accountsView .section-heading-copy {
+    display: none;
 }
 
 .panel-tools {
@@ -339,12 +349,12 @@ button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 34px;
-    padding: 0 14px;
+    min-height: 28px;
+    padding: 0 10px;
     border-radius: 999px;
     background: var(--md-sys-color-surface-container);
     color: var(--md-sys-color-on-surface-variant);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 800;
     letter-spacing: 0.03em;
 }
@@ -361,7 +371,7 @@ button {
 
 .table-shell {
     overflow: hidden;
-    border-radius: 24px;
+    border-radius: 16px;
     background: var(--md-sys-color-surface-strong);
     box-shadow: inset 0 0 0 1px var(--md-sys-color-outline);
 }
@@ -377,10 +387,10 @@ table {
 }
 
 thead th {
-    padding: 14px 16px;
+    padding: 12px 14px;
     text-align: left;
     color: var(--md-sys-color-on-surface-variant);
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 800;
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -388,9 +398,10 @@ thead th {
 }
 
 tbody td {
-    padding: 14px 16px;
+    padding: 12px 14px;
     border-bottom: 1px solid var(--md-sys-color-outline);
     vertical-align: top;
+    font-size: 13px;
 }
 
 tbody tr:hover {
@@ -412,13 +423,14 @@ tbody tr:last-child td {
     flex: 1;
     min-width: 0;
     word-break: break-word;
-    line-height: 1.6;
+    line-height: 1.5;
+    font-size: 13px;
 }
 
 .field-text.mono,
 .storage-path {
     font-family: "SFMono-Regular", "JetBrains Mono", Consolas, monospace;
-    font-size: 13px;
+    font-size: 12px;
 }
 
 .field-placeholder {
@@ -434,12 +446,12 @@ tbody tr:last-child td {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 10px;
-    border-radius: 14px;
+    padding: 7px 9px;
+    border-radius: 12px;
     background: var(--md-primary-soft);
     color: var(--md-sys-color-primary);
     font-family: "SFMono-Regular", "JetBrains Mono", Consolas, monospace;
-    font-size: 17px;
+    font-size: 15px;
     font-weight: 800;
 }
 
@@ -447,18 +459,33 @@ tbody tr:last-child td {
     display: inline-flex;
     width: fit-content;
     align-items: center;
-    padding: 5px 10px;
+    padding: 4px 8px;
     border-radius: 999px;
     background: var(--md-secondary-soft);
     color: var(--md-sys-color-on-surface-variant);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
 }
 
 .row-actions {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     flex-wrap: wrap;
+}
+
+.field-block .icon-action,
+.row-actions .icon-action,
+.otp-code .icon-action {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+}
+
+.field-block .icon-svg,
+.row-actions .icon-svg,
+.otp-code .icon-svg {
+    width: 15px;
+    height: 15px;
 }
 
 .icon-action.copied {
@@ -473,8 +500,8 @@ tbody tr:last-child td {
 }
 
 .settings-card {
-    padding: 18px;
-    border-radius: 24px;
+    padding: 14px;
+    border-radius: 16px;
     background: var(--md-sys-color-surface-strong);
     box-shadow: inset 0 0 0 1px var(--md-sys-color-outline);
     display: grid;
@@ -494,8 +521,8 @@ tbody tr:last-child td {
 }
 
 .storage-item {
-    padding: 14px 16px;
-    border-radius: 18px;
+    padding: 12px 14px;
+    border-radius: 14px;
     background: var(--md-sys-color-surface-container-high);
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
@@ -530,8 +557,8 @@ tbody tr:last-child td {
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    padding: 14px 16px;
-    border-radius: 18px;
+    padding: 12px 14px;
+    border-radius: 14px;
     background: var(--md-sys-color-surface-container-high);
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
@@ -555,8 +582,8 @@ tbody tr:last-child td {
 
 .empty-card {
     max-width: 420px;
-    padding: 30px;
-    border-radius: 28px;
+    padding: 24px;
+    border-radius: 18px;
     background: var(--md-sys-color-surface-strong);
     box-shadow: inset 0 0 0 1px var(--md-sys-color-outline);
 }
@@ -602,7 +629,7 @@ tbody tr:last-child td {
 
 .dialog {
     width: min(560px, 100%);
-    border-radius: 30px;
+    border-radius: 20px;
     background: var(--md-sys-color-surface-strong);
     box-shadow: var(--md-elevation-2);
     overflow: hidden;
@@ -625,7 +652,7 @@ tbody tr:last-child td {
 }
 
 .dialog-title {
-    font-size: 24px;
+    font-size: 20px;
     font-weight: 800;
     letter-spacing: -0.03em;
 }
@@ -657,7 +684,7 @@ tbody tr:last-child td {
     width: 100%;
     padding: 14px 16px;
     border: 1px solid var(--md-sys-color-outline);
-    border-radius: 18px;
+    border-radius: 14px;
     background: var(--md-sys-color-surface-container-high);
     color: var(--md-sys-color-on-surface);
     transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
@@ -721,15 +748,6 @@ tbody tr:last-child td {
     .settings-grid {
         grid-template-columns: 1fr;
     }
-
-    .topbar {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .topbar-actions {
-        justify-content: flex-start;
-    }
 }
 
 @media (max-width: 720px) {
@@ -743,7 +761,7 @@ tbody tr:last-child td {
     }
 
     .topbar-copy p {
-        white-space: normal;
+        display: none;
     }
 
     .topbar-actions {
@@ -765,8 +783,11 @@ tbody tr:last-child td {
     }
 
     .compact-add {
-        width: 100%;
-        justify-content: center;
+        padding-inline: 14px;
+    }
+
+    .compact-add span {
+        display: none;
     }
 
     .empty-state {

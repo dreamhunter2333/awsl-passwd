@@ -516,7 +516,6 @@ function renderAccountRow(account) {
             <td>
                 <div class="field-block">
                     <div class="field-text ${hasNotes ? '' : 'field-placeholder'}">${escapeHtml(account.notes || t('noNotes'))}</div>
-                    ${hasNotes ? renderCopyButton(account.id, 'notes') : ''}
                 </div>
             </td>
             <td>
@@ -599,10 +598,6 @@ function resolveCopyValue(account, field) {
 
     if (field === 'password') {
         return account.password;
-    }
-
-    if (field === 'notes') {
-        return account.notes;
     }
 
     if (field === 'otp') {
