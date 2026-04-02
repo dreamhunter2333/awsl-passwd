@@ -272,6 +272,45 @@ func (a *App) DeleteAccount(id string) error {
 	return fmt.Errorf("未找到指定的账号")
 }
 
+// ReorderAccounts 按给定 ID 顺序重排账号列表
+func (a *App) ReorderAccounts(ids []string) error {
+	accounts, err := a.manager.loadAccounts()
+	if err != nil {
+		return err
+	}
+
+	if len(accounts) != len(ids) {
+		return fmt.Errorf("账号排序数据不完整")
+	}
+
+	accountByID := make(map[string]Account, len(accounts))
+	for _, account := range accounts {
+		accountByID[account.ID] = account
+	}
+
+	reordered := make([]Account, 0, len(ids))
+	seen := make(map[string]struct{}, len(ids))
+	for _, id := range ids {
+		if id == "" {
+			return fmt.Errorf("账号排序ID不能为空")
+		}
+
+		if _, exists := seen[id]; exists {
+			return fmt.Errorf("账号排序包含重复ID")
+		}
+
+		account, exists := accountByID[id]
+		if !exists {
+			return fmt.Errorf("账号排序包含未知ID")
+		}
+
+		seen[id] = struct{}{}
+		reordered = append(reordered, account)
+	}
+
+	return a.manager.saveAccounts(reordered)
+}
+
 // GetOTPCode 获取指定账号的OTP验证码
 func (a *App) GetOTPCode(id string) (string, error) {
 	accounts, err := a.manager.loadAccounts()

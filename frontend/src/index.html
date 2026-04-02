@@ -38,9 +38,12 @@
                     <span class="toggle-icon" id="settingsToggleIcon" aria-hidden="true"></span>
                 </button>
                 <button class="icon-action compact-toggle" data-action="refresh" id="refreshButton" type="button">
-                    <svg class="icon-svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                        <path
-                            d="M17.65 6.35A7.95 7.95 0 0 0 12 4V1L7 6l5 5V7a5 5 0 1 1-4.9 6.01H5.02A7 7 0 1 0 17.65 6.35Z" />
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"
+                        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M21 12a9 9 0 0 1-15.5 6.36" />
+                        <path d="M3 12A9 9 0 0 1 18.5 5.64" />
+                        <path d="M3 16v-4h4" />
+                        <path d="M21 8v4h-4" />
                     </svg>
                 </button>
                 <button class="md-button filled compact-add" data-action="show-add" id="addAccountButton" type="button">
@@ -75,6 +78,7 @@
                         <table>
                             <thead>
                                 <tr>
+                                    <th data-i18n="colSort"></th>
                                     <th data-i18n="colName"></th>
                                     <th data-i18n="colPassword"></th>
                                     <th data-i18n="colNotes"></th>

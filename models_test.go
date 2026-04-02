@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"os"
+	"reflect"
 	"testing"
 )
 
@@ -150,5 +151,66 @@ func TestSaveAccountsDoesNotReEncryptWhenFileBecomesPlaintext(t *testing.T) {
 
 	if encrypted {
 		t.Fatalf("file unexpectedly re-encrypted: %s", string(data))
+	}
+}
+
+func TestReorderAccountsPersistsProvidedOrder(t *testing.T) {
+	t.Parallel()
+
+	manager := newPasswordManagerWithConfigDir(t.TempDir())
+	app := &App{manager: manager}
+	initialAccounts := []Account{
+		{ID: "1", Name: "alpha"},
+		{ID: "2", Name: "beta"},
+		{ID: "3", Name: "gamma"},
+	}
+
+	if err := manager.saveAccounts(initialAccounts); err != nil {
+		t.Fatalf("save initial accounts: %v", err)
+	}
+
+	if err := app.ReorderAccounts([]string{"3", "1", "2"}); err != nil {
+		t.Fatalf("reorder accounts: %v", err)
+	}
+
+	reorderedAccounts, err := manager.loadAccounts()
+	if err != nil {
+		t.Fatalf("load reordered accounts: %v", err)
+	}
+
+	gotIDs := []string{
+		reorderedAccounts[0].ID,
+		reorderedAccounts[1].ID,
+		reorderedAccounts[2].ID,
+	}
+	wantIDs := []string{"3", "1", "2"}
+	if !reflect.DeepEqual(gotIDs, wantIDs) {
+		t.Fatalf("unexpected order, got %v want %v", gotIDs, wantIDs)
+	}
+}
+
+func TestReorderAccountsRejectsInvalidIDs(t *testing.T) {
+	t.Parallel()
+
+	manager := newPasswordManagerWithConfigDir(t.TempDir())
+	app := &App{manager: manager}
+
+	if err := manager.saveAccounts([]Account{
+		{ID: "1", Name: "alpha"},
+		{ID: "2", Name: "beta"},
+	}); err != nil {
+		t.Fatalf("save initial accounts: %v", err)
+	}
+
+	if err := app.ReorderAccounts([]string{"1", "1"}); err == nil {
+		t.Fatal("expected duplicate ID reorder to fail")
+	}
+
+	if err := app.ReorderAccounts([]string{"1"}); err == nil {
+		t.Fatal("expected incomplete reorder to fail")
+	}
+
+	if err := app.ReorderAccounts([]string{"1", "3"}); err == nil {
+		t.Fatal("expected unknown ID reorder to fail")
 	}
 }

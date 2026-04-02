@@ -17,6 +17,12 @@ let otpTimerInterval = null;
 let otpRefreshInterval = null;
 let snackbarTimer = null;
 let isLoadingAccounts = false;
+let draggedAccountId = '';
+let isSavingAccountOrder = false;
+let accountOrderSaveQueue = Promise.resolve();
+let pendingAccountOrderSave = null;
+let pendingDragHandleAccountId = '';
+let latestAccountOrderVersion = 0;
 
 document.addEventListener('DOMContentLoaded', async function () {
     applyTheme();
@@ -37,6 +43,17 @@ function bindEvents() {
     document.getElementById('emptyStateUnlockPassword').addEventListener('keydown', handleUnlockInputKeydown);
     window.addEventListener('click', handleWindowClick);
     window.addEventListener('keydown', handleKeydown);
+
+    const accountsList = document.getElementById('accountsList');
+    if (!accountsList) {
+        return;
+    }
+
+    accountsList.addEventListener('pointerdown', handleAccountDragPointerDown);
+    accountsList.addEventListener('dragstart', handleAccountDragStart);
+    accountsList.addEventListener('dragover', handleAccountDragOver);
+    accountsList.addEventListener('drop', handleAccountDrop);
+    accountsList.addEventListener('dragend', handleAccountDragEnd);
 }
 
 function createDefaultSecurityInfo() {
@@ -565,6 +582,7 @@ function renderHeaderMeta() {
 
 async function selectConfigFile() {
     try {
+        await waitForPendingAccountOrderSave();
         const nextStorageInfo = await window.go.main.App.SelectConfigFile();
         if (!nextStorageInfo) {
             return;
@@ -597,6 +615,7 @@ async function resetConfigFile() {
     }
 
     try {
+        await waitForPendingAccountOrderSave();
         storageInfo = await window.go.main.App.ResetConfigFile();
         renderStorageInfo();
         await loadSecurityInfo();
@@ -631,6 +650,7 @@ async function submitSecurityAction() {
     }
 
     try {
+        await waitForPendingAccountOrderSave();
         if (enabling) {
             if (password !== confirmPassword) {
                 showSnackbar(t('securityPasswordMismatch'), 'error');
@@ -682,6 +702,7 @@ async function unlockSecurity() {
     }
 
     try {
+        await waitForPendingAccountOrderSave();
         applySecurityInfo(await window.go.main.App.UnlockDataFile(password));
         resetSecurityInputs();
         renderSecurityInfo();
@@ -705,6 +726,7 @@ async function unlockSecurity() {
 }
 
 async function lockSecurity() {
+    await waitForPendingAccountOrderSave();
     applySecurityInfo(await window.go.main.App.LockDataFile());
     accounts = [];
     resetSecurityInputs();
@@ -715,6 +737,10 @@ async function lockSecurity() {
 }
 
 async function loadAccounts(options = {}) {
+    if (!options.skipPendingOrderSave) {
+        await waitForPendingAccountOrderSave();
+    }
+
     if (isLoadingAccounts) {
         return false;
     }
@@ -722,7 +748,11 @@ async function loadAccounts(options = {}) {
     isLoadingAccounts = true;
 
     try {
-        accounts = await window.go.main.App.GetAccounts() || [];
+        const requestOrderVersion = latestAccountOrderVersion;
+        const loadedAccounts = await window.go.main.App.GetAccounts() || [];
+        accounts = requestOrderVersion === latestAccountOrderVersion
+            ? loadedAccounts
+            : preserveCurrentAccountOrder(loadedAccounts);
         renderAccounts();
         renderStats();
         return true;
@@ -781,6 +811,263 @@ function renderStats() {
 
 function getOTPEnabledCount() {
     return accounts.filter((account) => account.otp_key).length;
+}
+
+function handleAccountDragPointerDown(event) {
+    const handle = event.target.closest('[data-drag-handle]');
+    if (!handle) {
+        pendingDragHandleAccountId = '';
+        return;
+    }
+
+    const row = handle.closest('tr[data-account-id]');
+    pendingDragHandleAccountId = row?.dataset.accountId || '';
+}
+
+function handleAccountDragStart(event) {
+    if (accounts.length < 2) {
+        event.preventDefault();
+        return;
+    }
+
+    const row = event.target.closest('tr[data-account-id]');
+    if (!row) {
+        event.preventDefault();
+        return;
+    }
+
+    draggedAccountId = row.dataset.accountId || '';
+    if (!draggedAccountId || draggedAccountId !== pendingDragHandleAccountId) {
+        event.preventDefault();
+        draggedAccountId = '';
+        pendingDragHandleAccountId = '';
+        return;
+    }
+
+    row.classList.add('dragging');
+    pendingDragHandleAccountId = '';
+
+    if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', draggedAccountId);
+    }
+}
+
+function handleAccountDragOver(event) {
+    if (!draggedAccountId) {
+        return;
+    }
+
+    event.preventDefault();
+
+    if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = 'move';
+    }
+
+    const accountsList = event.currentTarget;
+    clearAccountDragIndicators(accountsList);
+
+    const targetRow = resolveAccountRowFromEvent(event);
+    if (!targetRow) {
+        const lastRow = getLastAccountRow(accountsList);
+        if (!lastRow || lastRow.dataset.accountId === draggedAccountId) {
+            return;
+        }
+
+        lastRow.classList.add('drag-over-after');
+        return;
+    }
+
+    const targetId = targetRow.dataset.accountId || '';
+    if (!targetId || targetId === draggedAccountId) {
+        return;
+    }
+
+    targetRow.classList.add(shouldInsertBeforeRow(event, targetRow) ? 'drag-over-before' : 'drag-over-after');
+}
+
+async function handleAccountDrop(event) {
+    if (!draggedAccountId) {
+        return;
+    }
+
+    event.preventDefault();
+
+    const nextAccounts = resolveDroppedAccounts(event);
+    finishAccountDrag(event.currentTarget);
+
+    if (!nextAccounts || hasSameAccountOrder(nextAccounts)) {
+        return;
+    }
+
+    accounts = nextAccounts;
+    renderAccounts();
+    renderStats();
+    await queueAccountOrderSave();
+}
+
+function handleAccountDragEnd(event) {
+    finishAccountDrag(event.currentTarget);
+}
+
+function finishAccountDrag(accountsList) {
+    if (accountsList) {
+        clearAccountDragIndicators(accountsList);
+    }
+
+    document.querySelectorAll('#accountsList tr.dragging').forEach((row) => {
+        row.classList.remove('dragging');
+    });
+    draggedAccountId = '';
+    pendingDragHandleAccountId = '';
+}
+
+function clearAccountDragIndicators(accountsList) {
+    if (!accountsList) {
+        return;
+    }
+
+    accountsList.querySelectorAll('.drag-over-before, .drag-over-after').forEach((row) => {
+        row.classList.remove('drag-over-before', 'drag-over-after');
+    });
+}
+
+function resolveAccountRowFromEvent(event) {
+    return event.target.closest('tr[data-account-id]');
+}
+
+function getLastAccountRow(accountsList) {
+    const rows = accountsList.querySelectorAll('tr[data-account-id]');
+    return rows.length > 0 ? rows[rows.length - 1] : null;
+}
+
+function shouldInsertBeforeRow(event, row) {
+    const rowRect = row.getBoundingClientRect();
+    return event.clientY < rowRect.top + rowRect.height / 2;
+}
+
+function resolveDroppedAccounts(event) {
+    const targetRow = resolveAccountRowFromEvent(event);
+    if (!targetRow) {
+        return moveAccountToIndex(draggedAccountId, accounts.length - 1);
+    }
+
+    const targetId = targetRow.dataset.accountId || '';
+    if (!targetId || targetId === draggedAccountId) {
+        return null;
+    }
+
+    return moveAccountRelative(draggedAccountId, targetId, shouldInsertBeforeRow(event, targetRow));
+}
+
+function moveAccountRelative(sourceId, targetId, insertBefore) {
+    const sourceIndex = accounts.findIndex((account) => account.id === sourceId);
+    const targetIndex = accounts.findIndex((account) => account.id === targetId);
+    if (sourceIndex < 0 || targetIndex < 0) {
+        return null;
+    }
+
+    const nextAccounts = [...accounts];
+    const [movedAccount] = nextAccounts.splice(sourceIndex, 1);
+    const adjustedTargetIndex = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex;
+    const insertIndex = insertBefore ? adjustedTargetIndex : adjustedTargetIndex + 1;
+    nextAccounts.splice(insertIndex, 0, movedAccount);
+    return nextAccounts;
+}
+
+function moveAccountToIndex(sourceId, targetIndex) {
+    const sourceIndex = accounts.findIndex((account) => account.id === sourceId);
+    if (sourceIndex < 0) {
+        return null;
+    }
+
+    const nextAccounts = [...accounts];
+    const [movedAccount] = nextAccounts.splice(sourceIndex, 1);
+    const boundedTargetIndex = Math.max(0, Math.min(targetIndex, nextAccounts.length));
+    nextAccounts.splice(boundedTargetIndex, 0, movedAccount);
+    return nextAccounts;
+}
+
+function hasSameAccountOrder(nextAccounts) {
+    if (nextAccounts.length !== accounts.length) {
+        return false;
+    }
+
+    return nextAccounts.every((account, index) => account.id === accounts[index]?.id);
+}
+
+function preserveCurrentAccountOrder(loadedAccounts) {
+    const loadedAccountById = new Map(loadedAccounts.map((account) => [account.id, account]));
+    const nextAccounts = [];
+
+    accounts.forEach((account) => {
+        const loadedAccount = loadedAccountById.get(account.id);
+        if (!loadedAccount) {
+            return;
+        }
+
+        nextAccounts.push(loadedAccount);
+        loadedAccountById.delete(account.id);
+    });
+
+    loadedAccountById.forEach((account) => {
+        nextAccounts.push(account);
+    });
+
+    return nextAccounts;
+}
+
+function queueAccountOrderSave() {
+    const orderedIds = accounts.map((account) => account.id);
+    const orderVersion = latestAccountOrderVersion + 1;
+    latestAccountOrderVersion = orderVersion;
+    const queuedSave = accountOrderSaveQueue
+        .catch(() => undefined)
+        .then(() => persistAccountOrder(orderedIds, orderVersion));
+    accountOrderSaveQueue = queuedSave;
+    const pendingSave = queuedSave.finally(() => {
+        if (pendingAccountOrderSave === pendingSave) {
+            pendingAccountOrderSave = null;
+        }
+    });
+    pendingAccountOrderSave = pendingSave;
+    return pendingSave;
+}
+
+function waitForPendingAccountOrderSave() {
+    if (!pendingAccountOrderSave) {
+        return Promise.resolve();
+    }
+
+    return pendingAccountOrderSave;
+}
+
+async function persistAccountOrder(orderedIds, orderVersion) {
+    isSavingAccountOrder = true;
+
+    try {
+        await window.go.main.App.ReorderAccounts(orderedIds);
+        if (isLatestAccountOrderVersion(orderVersion)) {
+            showSnackbar(t('reorderSuccess'));
+        }
+    } catch (error) {
+        console.error('reorder accounts failed:', error);
+        if (!isLatestAccountOrderVersion(orderVersion)) {
+            return;
+        }
+
+        await loadAccounts({
+            silentError: true,
+            skipPendingOrderSave: true
+        });
+        showSnackbar(`${t('reorderFailed')}: ${normalizeError(error)}`, 'error');
+    } finally {
+        isSavingAccountOrder = false;
+    }
+}
+
+function isLatestAccountOrderVersion(orderVersion) {
+    return orderVersion === latestAccountOrderVersion;
 }
 
 function renderAccounts() {
@@ -848,7 +1135,14 @@ function renderAccountRow(account) {
     const hasOTP = Boolean(account.otp_code);
 
     return `
-        <tr>
+        <tr class="account-row" data-account-id="${account.id}" draggable="true">
+            <td class="drag-cell">
+                <span class="drag-handle" data-drag-handle="true" title="${escapeHtml(t('dragHandleLabel'))}" aria-label="${escapeHtml(t('dragHandleLabel'))}">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path d="M8 6a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Zm0 4.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM8 15a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM16 6a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Zm0 4.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM16 15a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Z"/>
+                    </svg>
+                </span>
+            </td>
             <td>
                 <div class="field-block">
                     <div class="field-text">${escapeHtml(account.name)}</div>
@@ -1045,6 +1339,7 @@ async function handleAccountSubmit(event) {
     }
 
     try {
+        await waitForPendingAccountOrderSave();
         if (accountId) {
             await window.go.main.App.UpdateAccount(accountId, name, password, notes, otpKey);
         } else {
@@ -1069,6 +1364,7 @@ async function performDelete() {
     }
 
     try {
+        await waitForPendingAccountOrderSave();
         await window.go.main.App.DeleteAccount(pendingDeleteId);
         hideModal('deleteModal');
 
@@ -1091,6 +1387,7 @@ async function refreshAccounts() {
     }
 
     try {
+        await waitForPendingAccountOrderSave();
         await loadStorageInfo();
         await loadSecurityInfo();
 
@@ -1123,6 +1420,10 @@ function startOTPRefresh() {
 
     if (!otpRefreshInterval) {
         otpRefreshInterval = window.setInterval(() => {
+            if (draggedAccountId || isSavingAccountOrder) {
+                return;
+            }
+
             loadAccounts({ silentError: true });
         }, 30000);
     }
@@ -1134,6 +1435,11 @@ function updateOTPTimers() {
         if (currentRemaining <= 1) {
             timerElement.dataset.remaining = '0';
             timerElement.textContent = '0s';
+
+            if (draggedAccountId || isSavingAccountOrder) {
+                return;
+            }
+
             loadAccounts({ silentError: true });
             return;
         }
